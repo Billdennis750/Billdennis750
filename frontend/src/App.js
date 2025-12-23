@@ -46,6 +46,7 @@ function AppRoutes() {
       <Route path="/payment-callback" element={<PaymentCallbackPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/about" element={<AboutUsPage />} />
       <Route
         path="/dashboard"
         element={
