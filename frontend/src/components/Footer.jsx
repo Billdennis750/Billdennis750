@@ -22,9 +22,9 @@ const Footer = () => {
             </h4>
             <ul className="space-y-2">
               <li>
-                <a href="#about" className="body-small hover:text-green-600">
+                <Link to="/about" className="body-small hover:text-green-600">
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#why-choose-us" className="body-small hover:text-green-600">
