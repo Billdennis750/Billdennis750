@@ -262,10 +262,15 @@ test_plan:
     - "Xixapay Payment Initiation API"
     - "Xixapay Payment Verification API"
     - "Xixapay Webhook Handler"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Xixapay Payment Initiation API"
+    - "Xixapay Payment Verification API" 
+    - "Xixapay Webhook Handler"
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
     message: "Implemented Xixapay payment gateway integration replacing failed Nomba. Updated config.py and payments.py with Xixapay API endpoints and authentication. Backend is running successfully. Need to test payment initiation, verification, and webhook endpoints. Xixapay API credentials are in backend/.env."
+  - agent: "testing"
+    message: "CRITICAL ISSUE FOUND: Xixapay payment integration is completely broken. The API endpoint '/api/v1/payment/initiate' used in the implementation returns 404 Not Found. Tested extensively and confirmed Xixapay API is accessible but the specific endpoints used don't exist. Customer creation endpoint exists but requires many additional fields (first_name, last_name, phone_number, address, city, state, postal_code, id_type) not currently provided. This is a high-priority issue requiring either correct API documentation from Xixapay or alternative payment gateway. All payment-related functionality is currently non-functional."
