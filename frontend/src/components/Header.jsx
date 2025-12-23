@@ -76,9 +76,9 @@ const Header = () => {
       {mobileMenuOpen && (
         <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 shadow-lg md:hidden">
           <nav className="flex flex-col p-4 space-y-2">
-            <a href="#about" className="nav-link">
+            <Link to="/about" className="nav-link">
               About
-            </a>
+            </Link>
             <a href="#why-choose-us" className="nav-link">
               Why Us
             </a>
