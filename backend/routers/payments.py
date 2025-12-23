@@ -37,7 +37,15 @@ def get_xixapay_headers():
 
 @router.post("/initiate", response_model=dict)
 async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
-    """Initiate a payment transaction with Xixapay"""
+    """
+    Initiate a payment transaction with Xixapay using Dynamic Virtual Account.
+    
+    Xixapay Flow:
+    1. Create a dynamic virtual account with the exact payment amount
+    2. Return the virtual account details for customer to make payment
+    3. Customer pays to the virtual account via bank transfer
+    4. Xixapay sends webhook notification when payment is received
+    """
     try:
         # Verify application exists
         application = await db.applications.find_one({"application_id": payment.application_id})
@@ -50,61 +58,75 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         # Create unique order reference
         order_reference = f"CASHFLOW-{payment.application_id}-{int(datetime.now(timezone.utc).timestamp())}"
         
-        # Prepare Xixapay payment payload
-        payment_payload = {
-            "merchantId": settings.xixapay_merchant_id,
-            "merchantTransactionId": order_reference,
-            "amount": int(payment.amount),  # Xixapay expects integer amount in Naira
-            "currency": "NGN",
-            "description": "Loan Processing Fee - Cashflow MFB",
-            "customer": {
-                "name": payment.customer_name,
-                "email": payment.customer_email,
-            },
-            "callbackUrl": f"{settings.backend_url}/api/payments/webhook",
-            "redirectUrl": payment.redirect_url,
-            "metadata": {
-                "application_id": payment.application_id,
-                "fee_type": "processing_fee"
-            }
+        # Parse customer name into first and last name
+        name_parts = payment.customer_name.strip().split(' ', 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else name_parts[0]
+        
+        # Prepare Xixapay Dynamic Virtual Account payload
+        # Using Xixapay's createVirtualAccount endpoint for dynamic account
+        va_payload = {
+            "businessId": settings.xixapay_merchant_id,
+            "accountType": "dynamic",
+            "amount": int(payment.amount),  # Exact amount for dynamic account
+            "bankCode": ["29007", "20867"],  # Safehaven Dynamic and Palmpay
+            "name": payment.customer_name,
+            "email": payment.customer_email,
+            "externalReference": order_reference
         }
         
         checkout_link = None
         xixapay_reference = None
+        virtual_account_number = None
+        virtual_account_bank = None
         
         try:
-            # Create payment with Xixapay
+            # Create dynamic virtual account with Xixapay
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{settings.xixapay_base_url}/api/v1/payment/initiate",
+                    f"{settings.xixapay_base_url}/api/v1/createVirtualAccount",
                     headers=get_xixapay_headers(),
-                    json=payment_payload
+                    json=va_payload
                 )
                 
-                logger.info(f"Xixapay response status: {response.status_code}")
-                logger.info(f"Xixapay response: {response.text}")
+                logger.info(f"Xixapay VA response status: {response.status_code}")
+                logger.info(f"Xixapay VA response: {response.text}")
                 
                 if response.status_code == 200:
                     xixapay_response = response.json()
-                    checkout_link = xixapay_response.get("data", {}).get("authorizationUrl") or xixapay_response.get("authorizationUrl")
-                    xixapay_reference = xixapay_response.get("data", {}).get("reference") or xixapay_response.get("reference")
-                else:
-                    # Log the error but continue with fallback
-                    logger.error(f"Xixapay API error: {response.status_code} - {response.text}")
-                    raise Exception(f"Xixapay API returned {response.status_code}")
+                    data = xixapay_response.get("data", xixapay_response)
                     
+                    # Extract virtual account details
+                    virtual_account_number = data.get("accountNumber") or data.get("account_number")
+                    virtual_account_bank = data.get("bankName") or data.get("bank_name") or "Partner Bank"
+                    xixapay_reference = data.get("reference") or data.get("accountReference") or order_reference
+                    
+                    # For virtual accounts, the checkout "link" is the bank transfer info
+                    # We'll create a special URL that shows the bank transfer details
+                    checkout_link = f"{payment.redirect_url}?orderRef={order_reference}&type=bank_transfer&account={virtual_account_number}&bank={virtual_account_bank}&amount={int(payment.amount)}"
+                    
+                else:
+                    # Log the error
+                    logger.error(f"Xixapay API error: {response.status_code} - {response.text}")
+                    raise Exception(f"Xixapay API returned {response.status_code}: {response.text}")
+                    
+        except httpx.TimeoutException:
+            logger.error("Xixapay API timeout")
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="Payment gateway timeout. Please try again."
+            )
         except Exception as xixapay_error:
             logger.error(f"Xixapay payment initiation failed: {str(xixapay_error)}")
-            # Return error - no mock fallback as per user's requirement for real payment
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Payment gateway error: {str(xixapay_error)}"
             )
         
-        if not checkout_link:
+        if not virtual_account_number:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Failed to get payment URL from Xixapay"
+                detail="Failed to create virtual account for payment"
             )
         
         # Store transaction record
@@ -116,9 +138,12 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             "amount": payment.amount,
             "currency": "NGN",
             "xixapay_reference": xixapay_reference,
+            "virtual_account_number": virtual_account_number,
+            "virtual_account_bank": virtual_account_bank,
+            "payment_type": "bank_transfer",
             "status": "initiated",
             "transaction_reference": None,
-            "payment_method": None,
+            "payment_method": "bank_transfer",
             "webhook_received": False,
             "webhook_verified": False,
             "created_at": datetime.now(timezone.utc),
@@ -130,7 +155,14 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         return {
             "checkout_link": checkout_link,
             "order_reference": order_reference,
-            "status": "initiated"
+            "status": "initiated",
+            "payment_type": "bank_transfer",
+            "virtual_account": {
+                "account_number": virtual_account_number,
+                "bank_name": virtual_account_bank,
+                "amount": int(payment.amount),
+                "currency": "NGN"
+            }
         }
         
     except HTTPException:
@@ -145,7 +177,7 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
 
 @router.post("/verify", response_model=dict)
 async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
-    """Verify payment status with Xixapay"""
+    """Verify payment status - checks database for webhook updates"""
     try:
         # Find transaction
         transaction = await db.transactions.find_one({"order_reference": verify.order_ref})
@@ -155,89 +187,92 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
                 detail="Transaction not found"
             )
         
-        payment_status = "pending"
-        transaction_reference = ""
+        payment_status = transaction.get("status", "pending")
+        transaction_reference = transaction.get("transaction_reference", "")
         
-        try:
-            # Verify payment with Xixapay
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{settings.xixapay_base_url}/api/v1/payment/verify/{verify.order_ref}",
-                    headers=get_xixapay_headers()
-                )
-                
-                logger.info(f"Xixapay verify response: {response.status_code} - {response.text}")
-                
-                if response.status_code == 200:
-                    xixapay_data = response.json()
-                    data = xixapay_data.get("data", xixapay_data)
+        # For Xixapay virtual accounts, the status is updated via webhook
+        # We can optionally try to query Xixapay for status update
+        if payment_status in ["initiated", "pending"]:
+            try:
+                # Check if webhook has updated the status
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    response = await client.get(
+                        f"{settings.xixapay_base_url}/api/v1/transaction/{verify.order_ref}",
+                        headers=get_xixapay_headers()
+                    )
                     
-                    # Map Xixapay status to our status
-                    xixapay_status = data.get("status", "").lower()
-                    status_map = {
-                        "success": "completed",
-                        "successful": "completed",
-                        "completed": "completed",
-                        "paid": "completed",
-                        "pending": "pending",
-                        "processing": "pending",
-                        "failed": "failed",
-                        "cancelled": "failed",
-                        "abandoned": "failed"
-                    }
-                    payment_status = status_map.get(xixapay_status, "pending")
-                    transaction_reference = data.get("transactionReference") or data.get("reference") or ""
-                else:
-                    logger.warning(f"Xixapay verification returned {response.status_code}")
-                    
-        except Exception as verify_error:
-            logger.error(f"Xixapay verification error: {str(verify_error)}")
-            # Return current known status from database
-            payment_status = transaction.get("status", "pending")
+                    if response.status_code == 200:
+                        xixapay_data = response.json()
+                        data = xixapay_data.get("data", xixapay_data)
+                        
+                        # Map Xixapay status
+                        xixapay_status = str(data.get("status", "")).lower()
+                        status_map = {
+                            "success": "completed",
+                            "successful": "completed",
+                            "completed": "completed",
+                            "paid": "completed",
+                            "pending": "pending",
+                            "processing": "pending",
+                            "failed": "failed",
+                            "cancelled": "failed",
+                            "abandoned": "failed",
+                            "expired": "failed"
+                        }
+                        payment_status = status_map.get(xixapay_status, payment_status)
+                        transaction_reference = data.get("transactionReference") or data.get("reference") or transaction_reference
+                        
+            except Exception as verify_error:
+                logger.warning(f"Xixapay status check failed: {str(verify_error)}")
+                # Continue with database status
         
-        # Update transaction
-        await db.transactions.update_one(
-            {"order_reference": verify.order_ref},
-            {"$set": {
-                "status": payment_status,
-                "transaction_reference": transaction_reference,
-                "payment_method": "card",
-                "updated_at": datetime.now(timezone.utc)
-            }}
-        )
-        
-        # Update application if payment successful
-        if payment_status == "completed":
-            application_id = transaction["application_id"]
-            await db.applications.update_one(
-                {"application_id": application_id},
+        # Update transaction if status changed
+        if payment_status != transaction.get("status"):
+            await db.transactions.update_one(
+                {"order_reference": verify.order_ref},
                 {"$set": {
-                    "payment_status": "paid",
-                    "status": "under_review",
+                    "status": payment_status,
+                    "transaction_reference": transaction_reference,
                     "updated_at": datetime.now(timezone.utc)
                 }}
             )
             
-            # Get application details for email
-            application = await db.applications.find_one({"application_id": application_id})
-            
-            if application:
-                # Send email notification
-                try:
-                    await email_service.send_application_received(
-                        application.get("email"),
-                        application.get("full_name"),
-                        application_id,
-                        application.get("loan_amount")
-                    )
-                except Exception as email_error:
-                    logger.error(f"Failed to send email notification: {email_error}")
+            # Update application if payment successful
+            if payment_status == "completed":
+                application_id = transaction["application_id"]
+                await db.applications.update_one(
+                    {"application_id": application_id},
+                    {"$set": {
+                        "payment_status": "paid",
+                        "status": "under_review",
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+                
+                # Get application details for email
+                application = await db.applications.find_one({"application_id": application_id})
+                
+                if application:
+                    try:
+                        await email_service.send_application_received(
+                            application.get("email"),
+                            application.get("full_name"),
+                            application_id,
+                            application.get("loan_amount")
+                        )
+                    except Exception as email_error:
+                        logger.error(f"Failed to send email notification: {email_error}")
         
         return {
             "payment_status": payment_status,
             "transaction_reference": transaction_reference,
             "amount": transaction["amount"],
             "application_id": transaction["application_id"],
+            "payment_type": transaction.get("payment_type", "bank_transfer"),
+            "virtual_account": {
+                "account_number": transaction.get("virtual_account_number"),
+                "bank_name": transaction.get("virtual_account_bank")
+            } if transaction.get("virtual_account_number") else None,
             "message": f"Payment {payment_status}"
         }
         
@@ -253,16 +288,28 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
 
 @router.post("/webhook")
 async def xixapay_webhook(request: Request, db=Depends(get_db)):
-    """Handle Xixapay payment webhooks"""
+    """
+    Handle Xixapay payment webhooks for virtual account payments.
+    
+    Xixapay sends webhooks when:
+    - Payment is received on a virtual account
+    - Payment status changes
+    
+    Webhook payload includes:
+    - notification_status: Status of the payment
+    - transaction_id: Unique transaction identifier
+    - amount_paid: Amount received
+    - account_number: Virtual account that received payment
+    - external_reference: Your order reference
+    """
     try:
         # Get raw body
         body = await request.body()
         
-        # Optional: Verify webhook signature if Xixapay provides one
+        # Optional: Verify webhook signature if provided
         signature = request.headers.get("xixapay-signature") or request.headers.get("x-xixapay-signature")
         
         if signature and settings.xixapay_webhook_secret:
-            # Verify signature using HMAC-SHA256
             expected_signature = hmac.new(
                 settings.xixapay_webhook_secret.encode('utf-8'),
                 body,
@@ -280,10 +327,27 @@ async def xixapay_webhook(request: Request, db=Depends(get_db)):
         webhook_data = json.loads(body)
         logger.info(f"Received Xixapay webhook: {webhook_data}")
         
-        # Extract transaction details
-        order_ref = webhook_data.get("merchantTransactionId") or webhook_data.get("reference") or webhook_data.get("order_reference")
-        notification_status = webhook_data.get("status", "").lower()
-        transaction_id = webhook_data.get("transactionId") or webhook_data.get("transaction_id")
+        # Extract transaction details - handle various field name formats
+        order_ref = (
+            webhook_data.get("externalReference") or
+            webhook_data.get("external_reference") or
+            webhook_data.get("merchantTransactionId") or
+            webhook_data.get("reference") or
+            webhook_data.get("order_reference")
+        )
+        
+        notification_status = str(webhook_data.get("notification_status") or webhook_data.get("status") or "").lower()
+        transaction_id = webhook_data.get("transaction_id") or webhook_data.get("transactionId")
+        amount_paid = webhook_data.get("amount_paid") or webhook_data.get("amount")
+        settlement_amount = webhook_data.get("settlement_amount")
+        
+        if not order_ref:
+            # Try to find by account number
+            account_number = webhook_data.get("account_number") or webhook_data.get("accountNumber")
+            if account_number:
+                transaction = await db.transactions.find_one({"virtual_account_number": account_number})
+                if transaction:
+                    order_ref = transaction["order_reference"]
         
         if not order_ref:
             logger.warning("Webhook missing order reference")
@@ -299,28 +363,39 @@ async def xixapay_webhook(request: Request, db=Depends(get_db)):
             logger.warning(f"Transaction not found for webhook: {order_ref}")
             return {"status": "ok", "message": "Transaction not found"}
         
-        # Map status
+        # Map webhook status to internal status
         status_map = {
-            "success": "completed",
+            "payment_successful": "completed",
             "successful": "completed",
+            "success": "completed",
             "completed": "completed",
             "paid": "completed",
+            "payment_failed": "failed",
             "failed": "failed",
             "cancelled": "failed",
-            "abandoned": "failed"
+            "abandoned": "failed",
+            "expired": "failed"
         }
         payment_status = status_map.get(notification_status, "pending")
         
         # Update transaction
+        update_data = {
+            "status": payment_status,
+            "webhook_received": True,
+            "webhook_verified": True,
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        if transaction_id:
+            update_data["transaction_reference"] = transaction_id
+        if amount_paid:
+            update_data["amount_paid"] = amount_paid
+        if settlement_amount:
+            update_data["settlement_amount"] = settlement_amount
+            
         await db.transactions.update_one(
             {"order_reference": transaction["order_reference"]},
-            {"$set": {
-                "status": payment_status,
-                "transaction_reference": transaction_id,
-                "webhook_received": True,
-                "webhook_verified": True,
-                "updated_at": datetime.now(timezone.utc)
-            }}
+            {"$set": update_data}
         )
         
         # Update application if payment successful
@@ -336,6 +411,19 @@ async def xixapay_webhook(request: Request, db=Depends(get_db)):
             )
             
             logger.info(f"Application {application_id} marked as paid via webhook")
+            
+            # Send email notification
+            application = await db.applications.find_one({"application_id": application_id})
+            if application:
+                try:
+                    await email_service.send_application_received(
+                        application.get("email"),
+                        application.get("full_name"),
+                        application_id,
+                        application.get("loan_amount")
+                    )
+                except Exception as email_error:
+                    logger.error(f"Failed to send email notification: {email_error}")
         
         return {"status": "success", "message": "Webhook processed"}
         
@@ -353,3 +441,26 @@ async def xixapay_webhook(request: Request, db=Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Webhook processing failed"
         )
+
+
+@router.get("/transaction/{order_ref}")
+async def get_transaction(order_ref: str, db=Depends(get_db)):
+    """Get transaction details by order reference"""
+    transaction = await db.transactions.find_one(
+        {"order_reference": order_ref},
+        {"_id": 0}
+    )
+    
+    if not transaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found"
+        )
+    
+    # Convert datetime objects to ISO strings for JSON serialization
+    if transaction.get("created_at"):
+        transaction["created_at"] = transaction["created_at"].isoformat()
+    if transaction.get("updated_at"):
+        transaction["updated_at"] = transaction["updated_at"].isoformat()
+    
+    return transaction
