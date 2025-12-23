@@ -290,7 +290,7 @@ const AdminDashboard = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="body-small" style={{ color: 'var(--text-muted)' }}>Full Name</p>
-                      <p className="body-medium">{selectedApp.customerName}</p>
+                      <p className="body-medium">{selectedApp.full_name}</p>
                     </div>
                     <div>
                       <p className="body-small" style={{ color: 'var(--text-muted)' }}>Email</p>
@@ -302,7 +302,7 @@ const AdminDashboard = () => {
                     </div>
                     <div>
                       <p className="body-small" style={{ color: 'var(--text-muted)' }}>Employment Status</p>
-                      <p className="body-medium">{selectedApp.employmentStatus}</p>
+                      <p className="body-medium">{selectedApp.employment_status}</p>
                     </div>
                   </div>
                 </div>
@@ -314,16 +314,12 @@ const AdminDashboard = () => {
                     <div>
                       <p className="body-small" style={{ color: 'var(--text-muted)' }}>Loan Amount</p>
                       <p className="heading-3" style={{ color: 'var(--accent-text)' }}>
-                        ₦{selectedApp.loanAmount.toLocaleString()}
+                        ₦{selectedApp.loan_amount.toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <p className="body-small" style={{ color: 'var(--text-muted)' }}>Monthly Income</p>
-                      <p className="body-medium">₦{selectedApp.monthlyIncome.toLocaleString()}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="body-small" style={{ color: 'var(--text-muted)' }}>Reason for Loan</p>
-                      <p className="body-medium">{selectedApp.reason}</p>
+                      <p className="body-medium">₦{selectedApp.monthly_income.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -338,11 +334,11 @@ const AdminDashboard = () => {
                     </div>
                     <div>
                       <p className="body-small" style={{ color: 'var(--text-muted)' }}>Payment Status</p>
-                      <p className="body-medium font-semibold">{selectedApp.paymentStatus}</p>
+                      <p className="body-medium font-semibold">{selectedApp.payment_status}</p>
                     </div>
                     <div>
                       <p className="body-small" style={{ color: 'var(--text-muted)' }}>Applied Date</p>
-                      <p className="body-medium">{selectedApp.appliedDate}</p>
+                      <p className="body-medium">{new Date(selectedApp.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
