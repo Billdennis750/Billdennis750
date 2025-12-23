@@ -3,6 +3,10 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const PaymentCallbackPage = () => {
   const navigate = useNavigate();
@@ -11,29 +15,47 @@ const PaymentCallbackPage = () => {
   const [paymentData, setPaymentData] = useState(null);
 
   useEffect(() => {
-    // Mock payment verification
-    const orderRef = searchParams.get('orderRef');
-    const paymentStatus = searchParams.get('status');
+    verifyPayment();
+  }, []);
 
-    setTimeout(() => {
-      if (paymentStatus === 'success') {
+  const verifyPayment = async () => {
+    try {
+      // Get order reference from URL or localStorage
+      const orderRef = searchParams.get('orderRef') || localStorage.getItem('order_reference');
+      const applicationId = localStorage.getItem('application_id');
+
+      if (!orderRef) {
+        setStatus('failed');
+        return;
+      }
+
+      // Verify payment with backend
+      const response = await axios.post(`${API}/payments/verify`, {
+        order_ref: orderRef
+      });
+
+      const { payment_status, transaction_reference, amount } = response.data;
+
+      if (payment_status === 'completed') {
         setStatus('success');
         setPaymentData({
           orderRef: orderRef,
-          amount: 2500,
-          transactionRef: `NOMBA-${Date.now()}`,
+          amount: amount,
+          transactionRef: transaction_reference,
+          applicationId: applicationId
         });
         
-        // Store payment success
-        const application = JSON.parse(localStorage.getItem('currentApplication') || '{}');
-        application.paymentStatus = 'Paid';
-        application.status = 'Under Review';
-        localStorage.setItem('currentApplication', JSON.stringify(application));
+        // Clear localStorage
+        localStorage.removeItem('order_reference');
+        localStorage.removeItem('application_id');
       } else {
         setStatus('failed');
       }
-    }, 2000);
-  }, [searchParams]);
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      setStatus('failed');
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg-section)' }}>
