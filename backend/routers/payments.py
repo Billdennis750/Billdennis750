@@ -64,15 +64,23 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         first_name = name_parts[0]
         last_name = name_parts[1] if len(name_parts) > 1 else name_parts[0]
         
+        # Get phone number - use provided or extract from application
+        phone_number = payment.customer_phone
+        if not phone_number and application:
+            phone_number = application.get("phone", "08000000000")
+        if not phone_number:
+            phone_number = "08000000000"  # Default placeholder
+        
         # Prepare Xixapay Dynamic Virtual Account payload
         # Using Xixapay's createVirtualAccount endpoint for dynamic account
         va_payload = {
             "businessId": settings.xixapay_merchant_id,
             "accountType": "dynamic",
             "amount": int(payment.amount),  # Exact amount for dynamic account
-            "bankCode": ["29007", "20867"],  # Safehaven Dynamic and Palmpay
+            "bankCode": ["29007"],  # Safehaven Dynamic
             "name": payment.customer_name,
             "email": payment.customer_email,
+            "phoneNumber": phone_number,
             "externalReference": order_reference
         }
         
