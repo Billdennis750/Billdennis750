@@ -112,12 +112,12 @@ const LoginPage = () => {
               </form>
             </Form>
 
-            <div className="mt-6 p-4 rounded-lg" style={{ background: 'var(--accent-wash)' }}>
-              <p className="body-small text-center" style={{ color: 'var(--text-secondary)' }}>
-                <strong>Demo Accounts:</strong><br />
-                User: user@example.com<br />
-                Admin: admin@cashflowmfb.ng<br />
-                Password: any password (mock login)
+            <div className="mt-6 text-center">
+              <p className="body-small" style={{ color: 'var(--text-secondary)' }}>
+                Don't have an account?{' '}
+                <Link to="/register" className="font-medium" style={{ color: 'var(--accent-text)' }}>
+                  Register here
+                </Link>
               </p>
             </div>
           </CardContent>
