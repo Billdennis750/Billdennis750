@@ -11,10 +11,6 @@ import {
   Clock,
   BadgeCheck,
   Users,
-  Star,
-  Calculator,
-  TrendingUp,
-  Target,
 } from 'lucide-react';
 import { mockPartners } from '../mock';
 
@@ -23,106 +19,53 @@ const HomePage = () => {
     <div>
       <Header />
 
-      {/* Hero Section with Gradient */}
-      <section 
-        className="min-h-screen flex items-center justify-center pt-24 pb-16 px-4"
-        style={{
-          background: 'radial-gradient(at 53% 78%, hsla(60,100%,50%,0.2) 0px, transparent 50%), radial-gradient(at 71% 91%, hsla(108,100%,50%,0.2) 0px, transparent 50%), radial-gradient(at 31% 91%, hsla(30,100%,50%,0.15) 0px, transparent 50%), white'
-        }}
-      >
+      {/* Hero Section */}
+      <section className="hero-gradient min-h-screen flex items-center justify-center pt-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Trust Badge */}
-          <div className="inline-flex items-center space-x-2 mb-8 px-6 py-3 rounded-full" style={{ background: 'var(--accent-wash)', border: '1px solid var(--accent-strong)' }}>
-            <BadgeCheck className="w-5 h-5" style={{ color: 'var(--accent-text)' }} />
-            <span className="body-small font-semibold" style={{ color: 'var(--accent-text)' }}>
-              CBN Regulated & Licensed
-            </span>
-          </div>
-
-          {/* Main Headline */}
-          <h1 className="heading-1 mb-6" style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', lineHeight: '1.1' }}>
+          <h1 className="heading-1 mb-6">
             Get ₦1.5M – ₦15M.
             <br />
-            <span style={{ color: 'var(--text-primary)' }}>No Collateral.</span>{' '}
-            <span style={{ color: 'var(--accent-text)' }}>No Stress.</span>
+            No Collateral. No Stress.
           </h1>
-
-          {/* Subheadline */}
-          <p className="body-large mb-8 max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', fontSize: 'clamp(1.125rem, 2.5vw, 1.375rem)' }}>
+          <p className="body-large mb-8" style={{ color: 'var(--text-secondary)' }}>
             Money shouldn't slow you down. We give you fast loans with zero
-            collateral. <strong>Straightforward. Quick. Reliable.</strong>
+            collateral. Straightforward. Quick. Reliable.
           </p>
-
-          {/* Key Benefits */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 max-w-3xl mx-auto">
-            <div className="flex items-center justify-center md:justify-start space-x-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--accent-primary)' }}>
-                <CheckCircle className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-left">
-                <p className="body-medium font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Approval in 24-48 hours
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center md:justify-start space-x-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--accent-primary)' }}>
-                <CheckCircle className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-left">
-                <p className="body-medium font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  100% Collateral-Free
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center md:justify-start space-x-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--accent-primary)' }}>
-                <CheckCircle className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-left">
-                <p className="body-medium font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Flexible Repayment
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/apply">
-              <button 
-                className="btn-primary text-lg px-8 py-4 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
-                style={{ 
-                  minWidth: '200px',
-                  background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-strong))'
-                }}
-              >
-                Apply Now <ArrowRight className="w-5 h-5 ml-2 inline" />
-              </button>
+              <button className="btn-primary">Apply Now</button>
             </Link>
-            <Link to="/apply">
-              <button 
-                className="btn-secondary text-lg px-8 py-4 font-semibold hover:bg-gray-50 transition-all"
-                style={{ minWidth: '200px' }}
-              >
-                <Calculator className="w-5 h-5 mr-2 inline" />
-                Calculate Your Loan
-              </button>
-            </Link>
+            <a href="#why-choose-us">
+              <button className="btn-secondary">Learn More</button>
+            </a>
           </div>
 
           {/* Trust Indicators */}
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <div className="flex items-center space-x-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-              ))}
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+                   style={{ background: 'var(--accent-wash)' }}>
+                <Clock className="w-6 h-6" style={{ color: 'var(--accent-text)' }} />
+              </div>
+              <h3 className="heading-3 mb-2">Fast Approval</h3>
+              <p className="body-small">Get approved in 24 hours</p>
             </div>
-            <p className="body-medium" style={{ color: 'var(--text-secondary)' }}>
-              Trusted by over <strong style={{ color: 'var(--text-primary)' }}>10,000+ Nigerians</strong>
-            </p>
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+                   style={{ background: 'var(--accent-wash)' }}>
+                <Shield className="w-6 h-6" style={{ color: 'var(--accent-text)' }} />
+              </div>
+              <h3 className="heading-3 mb-2">No Collateral</h3>
+              <p className="body-small">100% unsecured loans</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+                   style={{ background: 'var(--accent-wash)' }}>
+                <BadgeCheck className="w-6 h-6" style={{ color: 'var(--accent-text)' }} />
+              </div>
+              <h3 className="heading-3 mb-2">CBN Regulated</h3>
+              <p className="body-small">Fully licensed & compliant</p>
+            </div>
           </div>
         </div>
       </section>
