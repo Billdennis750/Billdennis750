@@ -73,6 +73,9 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         
         # Prepare Xixapay Dynamic Virtual Account payload
         # Using Xixapay's createVirtualAccount endpoint for dynamic account
+        # IMPORTANT: callbackUrl must be publicly accessible for webhooks
+        webhook_url = f"{settings.backend_url}/api/payments/webhook"
+        
         va_payload = {
             "businessId": settings.xixapay_merchant_id,
             "accountType": "dynamic",
@@ -81,8 +84,11 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             "name": payment.customer_name,
             "email": payment.customer_email,
             "phoneNumber": phone_number,
-            "externalReference": order_reference
+            "externalReference": order_reference,
+            "callbackUrl": webhook_url  # Webhook URL for payment notifications
         }
+        
+        logger.info(f"Creating virtual account with webhook URL: {webhook_url}")
         
         checkout_link = None
         xixapay_reference = None
