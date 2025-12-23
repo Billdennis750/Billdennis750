@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import AboutUsPage from './pages/AboutUsPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
