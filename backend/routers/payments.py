@@ -19,6 +19,7 @@ class PaymentInitiate(BaseModel):
     application_id: str
     customer_email: str
     customer_name: str
+    customer_phone: str = ""
     amount: float = 2500
     redirect_url: str
 
