@@ -197,67 +197,77 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {applications.map((app) => (
-                    <tr key={app.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td className="py-4 px-4">
-                        <span className="body-medium font-mono">{app.id}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div>
-                          <p className="body-medium">{app.customerName}</p>
-                          <p className="body-small" style={{ color: 'var(--text-muted)' }}>
-                            {app.email}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="body-medium font-semibold">
-                          ₦{app.loanAmount.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="px-3 py-1 rounded-full text-sm"
-                              style={{ 
-                                background: app.status === 'Approved' ? 'var(--accent-wash)' : 
-                                           app.status === 'Under Review' ? '#fef3c7' : 
-                                           'var(--bg-section)',
-                                color: app.status === 'Approved' ? 'var(--accent-text)' : 
-                                      'var(--text-body)'
-                              }}>
-                          {app.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="body-small">{app.appliedDate}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-full"
-                            onClick={() => setSelectedApp(app)}
-                          >
-                            View
-                          </Button>
-                          <Select
-                            onValueChange={(value) => handleStatusChange(app.id, value)}
-                            defaultValue={app.status}
-                          >
-                            <SelectTrigger className="w-32 rounded-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Under Review">Under Review</SelectItem>
-                              <SelectItem value="Approved">Approved</SelectItem>
-                              <SelectItem value="Rejected">Rejected</SelectItem>
-                              <SelectItem value="Disbursed">Disbursed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </td>
+                  {loading ? (
+                    <tr>
+                      <td colSpan="6" className="text-center py-8">Loading applications...</td>
                     </tr>
-                  ))}
+                  ) : applications.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center py-8">No applications found</td>
+                    </tr>
+                  ) : (
+                    applications.map((app) => (
+                      <tr key={app.application_id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                        <td className="py-4 px-4">
+                          <span className="body-medium font-mono">{app.application_id}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="body-medium">{app.full_name}</p>
+                            <p className="body-small" style={{ color: 'var(--text-muted)' }}>
+                              {app.email}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="body-medium font-semibold">
+                            ₦{app.loan_amount.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="px-3 py-1 rounded-full text-sm"
+                                style={{ 
+                                  background: app.status === 'approved' ? 'var(--accent-wash)' : 
+                                             app.status === 'under_review' ? '#fef3c7' : 
+                                             'var(--bg-section)',
+                                  color: app.status === 'approved' ? 'var(--accent-text)' : 
+                                        'var(--text-body)'
+                                }}>
+                            {app.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="body-small">{new Date(app.created_at).toLocaleDateString()}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-full"
+                              onClick={() => setSelectedApp(app)}
+                            >
+                              View
+                            </Button>
+                            <Select
+                              onValueChange={(value) => handleStatusChange(app.application_id, value)}
+                              defaultValue={app.status}
+                            >
+                              <SelectTrigger className="w-32 rounded-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="under_review">Under Review</SelectItem>
+                                <SelectItem value="approved">Approved</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                                <SelectItem value="disbursed">Disbursed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
