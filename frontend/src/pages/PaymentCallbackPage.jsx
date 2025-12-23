@@ -16,6 +16,7 @@ const PaymentCallbackPage = () => {
 
   useEffect(() => {
     verifyPayment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const verifyPayment = async () => {
