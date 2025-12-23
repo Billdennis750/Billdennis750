@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from models.user import UserCreate, UserLogin, Token, User
-from utils.auth import get_password_hash, verify_password, create_access_token
+from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from database import get_db
 from datetime import datetime
 import logging
