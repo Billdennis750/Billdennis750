@@ -1,27 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Copy, Building2, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const PaymentCallbackPage = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState('verifying');
+  const [status, setStatus] = useState('loading');
   const [paymentData, setPaymentData] = useState(null);
+  const [pollCount, setPollCount] = useState(0);
 
-  useEffect(() => {
-    verifyPayment();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Check if this is a bank transfer payment
+  const paymentType = searchParams.get('type');
+  const accountNumber = searchParams.get('account');
+  const bankName = searchParams.get('bank');
+  const amount = searchParams.get('amount');
 
-  const verifyPayment = async () => {
+  const verifyPayment = useCallback(async () => {
     try {
-      // Get order reference from URL or localStorage
       const orderRef = searchParams.get('orderRef') || localStorage.getItem('order_reference');
       const applicationId = localStorage.getItem('application_id');
 
@@ -30,51 +31,187 @@ const PaymentCallbackPage = () => {
         return;
       }
 
-      // Verify payment with backend
       const response = await axios.post(`${API}/payments/verify`, {
         order_ref: orderRef
       });
 
-      const { payment_status, transaction_reference, amount } = response.data;
+      const { payment_status, transaction_reference, amount: paidAmount, virtual_account } = response.data;
+
+      setPaymentData({
+        orderRef: orderRef,
+        amount: paidAmount,
+        transactionRef: transaction_reference,
+        applicationId: applicationId,
+        virtualAccount: virtual_account
+      });
 
       if (payment_status === 'completed') {
         setStatus('success');
-        setPaymentData({
-          orderRef: orderRef,
-          amount: amount,
-          transactionRef: transaction_reference,
-          applicationId: applicationId
-        });
-        
-        // Clear localStorage
         localStorage.removeItem('order_reference');
         localStorage.removeItem('application_id');
-      } else {
+      } else if (payment_status === 'failed') {
         setStatus('failed');
+      } else {
+        // Payment still pending - show bank transfer instructions
+        setStatus('pending');
       }
     } catch (error) {
       console.error('Payment verification error:', error);
       setStatus('failed');
     }
+  }, [searchParams]);
+
+  useEffect(() => {
+    // If it's a bank transfer, show instructions first
+    if (paymentType === 'bank_transfer' && accountNumber) {
+      setStatus('bank_transfer');
+      setPaymentData({
+        orderRef: searchParams.get('orderRef'),
+        amount: parseInt(amount) || 2500,
+        virtualAccount: {
+          account_number: accountNumber,
+          bank_name: decodeURIComponent(bankName || 'Partner Bank')
+        }
+      });
+    } else {
+      verifyPayment();
+    }
+  }, [paymentType, accountNumber, bankName, amount, searchParams, verifyPayment]);
+
+  // Poll for payment status when showing bank transfer instructions
+  useEffect(() => {
+    if (status === 'bank_transfer' && pollCount < 60) {
+      const interval = setInterval(async () => {
+        setPollCount(prev => prev + 1);
+        try {
+          const orderRef = searchParams.get('orderRef') || localStorage.getItem('order_reference');
+          if (orderRef) {
+            const response = await axios.post(`${API}/payments/verify`, {
+              order_ref: orderRef
+            });
+            
+            if (response.data.payment_status === 'completed') {
+              setStatus('success');
+              setPaymentData(prev => ({
+                ...prev,
+                transactionRef: response.data.transaction_reference
+              }));
+              localStorage.removeItem('order_reference');
+              localStorage.removeItem('application_id');
+            }
+          }
+        } catch (error) {
+          console.error('Poll error:', error);
+        }
+      }, 10000); // Poll every 10 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [status, pollCount, searchParams]);
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard!');
+  };
+
+  const handleVerifyClick = () => {
+    setStatus('verifying');
+    verifyPayment();
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg-section)' }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ background: 'var(--bg-section)' }}>
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">
+            {status === 'loading' && 'Loading...'}
             {status === 'verifying' && 'Verifying Payment...'}
+            {status === 'bank_transfer' && 'Complete Your Payment'}
+            {status === 'pending' && 'Awaiting Payment'}
             {status === 'success' && 'Payment Successful!'}
             {status === 'failed' && 'Payment Failed'}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center space-y-6">
-          {status === 'verifying' && (
+          {(status === 'loading' || status === 'verifying') && (
             <div className="flex flex-col items-center">
               <Loader2 className="w-16 h-16 animate-spin" style={{ color: 'var(--accent-text)' }} />
               <p className="body-medium mt-4" style={{ color: 'var(--text-secondary)' }}>
-                Please wait while we verify your payment...
+                {status === 'loading' ? 'Loading payment details...' : 'Verifying your payment...'}
               </p>
+            </div>
+          )}
+
+          {(status === 'bank_transfer' || status === 'pending') && paymentData?.virtualAccount && (
+            <div>
+              <Building2 className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--accent-text)' }} />
+              
+              <div className="p-4 rounded-lg mb-4" style={{ background: 'var(--accent-wash)' }}>
+                <p className="body-small font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Transfer exactly ₦{paymentData.amount?.toLocaleString()} to:
+                </p>
+              </div>
+
+              <div className="space-y-4 text-left">
+                <div className="p-4 border rounded-lg">
+                  <p className="body-small" style={{ color: 'var(--text-muted)' }}>Bank Name</p>
+                  <p className="body-medium font-semibold">{paymentData.virtualAccount.bank_name}</p>
+                </div>
+
+                <div className="p-4 border rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="body-small" style={{ color: 'var(--text-muted)' }}>Account Number</p>
+                      <p className="body-medium font-mono font-semibold text-lg">
+                        {paymentData.virtualAccount.account_number}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(paymentData.virtualAccount.account_number)}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-4 border rounded-lg">
+                  <p className="body-small" style={{ color: 'var(--text-muted)' }}>Amount</p>
+                  <p className="heading-3" style={{ color: 'var(--accent-text)' }}>
+                    ₦{paymentData.amount?.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 rounded-lg border border-yellow-300 bg-yellow-50">
+                <div className="flex items-start gap-2">
+                  <Clock className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="body-small font-medium text-yellow-800">Important:</p>
+                    <ul className="body-small text-yellow-700 list-disc list-inside mt-1">
+                      <li>Transfer the exact amount shown</li>
+                      <li>Use any Nigerian bank app or USSD</li>
+                      <li>Payment confirms automatically</li>
+                      <li>This page will update when payment is received</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <Button 
+                  className="w-full btn-primary" 
+                  onClick={handleVerifyClick}
+                >
+                  I've Made the Transfer
+                </Button>
+                <Link to="/" className="block">
+                  <Button variant="outline" className="w-full rounded-full">
+                    Cancel & Go Home
+                  </Button>
+                </Link>
+              </div>
             </div>
           )}
 
@@ -82,12 +219,14 @@ const PaymentCallbackPage = () => {
             <div>
               <CheckCircle className="w-16 h-16 mx-auto" style={{ color: 'var(--accent-text)' }} />
               <div className="mt-6 space-y-4">
-                <div>
-                  <p className="body-small" style={{ color: 'var(--text-muted)' }}>
-                    Transaction Reference
-                  </p>
-                  <p className="body-medium font-mono">{paymentData?.transactionRef}</p>
-                </div>
+                {paymentData?.transactionRef && (
+                  <div>
+                    <p className="body-small" style={{ color: 'var(--text-muted)' }}>
+                      Transaction Reference
+                    </p>
+                    <p className="body-medium font-mono">{paymentData.transactionRef}</p>
+                  </div>
+                )}
                 <div>
                   <p className="body-small" style={{ color: 'var(--text-muted)' }}>
                     Amount Paid
