@@ -139,7 +139,23 @@ async def get_all_applications(
         
         skip = (page - 1) * limit
         
-        applications = await db.applications.find(query).skip(skip).limit(limit).to_list(limit)
+        # Define projection to limit fields returned
+        projection = {
+            '_id': 1,
+            'application_id': 1,
+            'full_name': 1,
+            'email': 1,
+            'phone': 1,
+            'loan_amount': 1,
+            'status': 1,
+            'payment_status': 1,
+            'employment_status': 1,
+            'monthly_income': 1,
+            'created_at': 1,
+            'updated_at': 1
+        }
+        
+        applications = await db.applications.find(query, projection).skip(skip).limit(limit).to_list(limit)
         total = await db.applications.count_documents(query)
         
         # Convert ObjectIds and dates
