@@ -58,10 +58,22 @@ export const mockAdminStats = {
 };
 
 export const mockPartners = [
-  { name: 'Partner 1', logo: 'https://via.placeholder.com/150x60?text=Partner+1' },
-  { name: 'Partner 2', logo: 'https://via.placeholder.com/150x60?text=Partner+2' },
-  { name: 'Partner 3', logo: 'https://via.placeholder.com/150x60?text=Partner+3' },
-  { name: 'Partner 4', logo: 'https://via.placeholder.com/150x60?text=Partner+4' },
+  { 
+    name: 'Zenith Bank', 
+    logo: 'https://customer-assets.emergentagent.com/job_easy-loan-access/artifacts/nux1a2f0_download%20%284%29.png' 
+  },
+  { 
+    name: 'First Bank', 
+    logo: 'https://customer-assets.emergentagent.com/job_easy-loan-access/artifacts/njxhxlzd_download%20%283%29.png' 
+  },
+  { 
+    name: 'Access Bank', 
+    logo: 'https://customer-assets.emergentagent.com/job_easy-loan-access/artifacts/wpx21s8t_download%20%282%29.png' 
+  },
+  { 
+    name: 'GTBank', 
+    logo: 'https://customer-assets.emergentagent.com/job_easy-loan-access/artifacts/rty3liiw_download%20%281%29.png' 
+  },
 ];
 
 export const mockRepaymentSchedule = [
