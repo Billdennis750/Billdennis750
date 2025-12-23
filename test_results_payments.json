@@ -1,0 +1,57 @@
+{
+  "summary": {
+    "passed": 4,
+    "total": 7
+  },
+  "results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "message": "Backend is running",
+      "details": null,
+      "timestamp": "2025-12-23T20:00:44.991271"
+    },
+    {
+      "test": "Create Test Application",
+      "success": true,
+      "message": "Application created: LOAN-2025-003",
+      "details": null,
+      "timestamp": "2025-12-23T20:00:45.015719"
+    },
+    {
+      "test": "Payment Initiation",
+      "success": false,
+      "message": "API returned 521",
+      "details": "{\"detail\":\"Payment gateway error: Xixapay API returned 404\"}",
+      "timestamp": "2025-12-23T20:00:45.380001"
+    },
+    {
+      "test": "Payment Verification",
+      "success": false,
+      "message": "No order reference available",
+      "details": null,
+      "timestamp": "2025-12-23T20:00:45.380036"
+    },
+    {
+      "test": "Webhook Handler",
+      "success": false,
+      "message": "No order reference available",
+      "details": null,
+      "timestamp": "2025-12-23T20:00:45.380041"
+    },
+    {
+      "test": "Invalid Application Payment",
+      "success": true,
+      "message": "Correctly rejected invalid application ID",
+      "details": null,
+      "timestamp": "2025-12-23T20:00:45.395792"
+    },
+    {
+      "test": "Invalid Order Verification",
+      "success": true,
+      "message": "Correctly rejected invalid order reference",
+      "details": null,
+      "timestamp": "2025-12-23T20:00:45.403702"
+    }
+  ]
+}
