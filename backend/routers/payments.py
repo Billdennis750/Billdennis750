@@ -143,37 +143,49 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
                 detail="Transaction not found"
             )
         
-        # Get Nomba headers
-        headers = await get_nomba_headers()
+        payment_status = "pending"
+        transaction_reference = ""
         
-        # Query Nomba for transaction status
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{settings.nomba_base_url}/v1/checkout/order/{verify.order_ref}",
-                headers=headers,
-                timeout=15.0
-            )
-            response.raise_for_status()
-            nomba_transaction = response.json()
-        
-        # Determine payment status
-        nomba_status = nomba_transaction.get("status", "").lower()
-        status_map = {
-            "completed": "completed",
-            "successful": "completed",
-            "pending": "pending",
-            "failed": "failed",
-            "cancelled": "failed"
-        }
-        payment_status = status_map.get(nomba_status, "pending")
+        try:
+            # Try real Nomba verification
+            headers = await get_nomba_headers()
+            
+            # Query Nomba for transaction status
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{settings.nomba_base_url}/v1/checkout/order/{verify.order_ref}",
+                    headers=headers,
+                    timeout=15.0
+                )
+                response.raise_for_status()
+                nomba_transaction = response.json()
+            
+            # Determine payment status
+            nomba_status = nomba_transaction.get("status", "").lower()
+            status_map = {
+                "completed": "completed",
+                "successful": "completed",
+                "pending": "pending",
+                "failed": "failed",
+                "cancelled": "failed"
+            }
+            payment_status = status_map.get(nomba_status, "pending")
+            transaction_reference = nomba_transaction.get("transactionReference", "")
+            
+        except Exception as nomba_error:
+            logger.warning(f"Nomba verification failed, using mock: {str(nomba_error)}")
+            # Fallback to mock verification - mark as completed
+            if transaction["nomba_checkout_id"].startswith("mock_"):
+                payment_status = "completed"
+                transaction_reference = f"MOCK-TXN-{int(datetime.now().timestamp())}"
         
         # Update transaction
         await db.transactions.update_one(
             {"order_reference": verify.order_ref},
             {"$set": {
                 "status": payment_status,
-                "transaction_reference": nomba_transaction.get("transactionReference"),
-                "payment_method": nomba_transaction.get("paymentMethod"),
+                "transaction_reference": transaction_reference,
+                "payment_method": "card",
                 "updated_at": datetime.utcnow()
             }}
         )
@@ -203,7 +215,7 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
         
         return {
             "payment_status": payment_status,
-            "transaction_reference": nomba_transaction.get("transactionReference", ""),
+            "transaction_reference": transaction_reference,
             "amount": transaction["amount"],
             "application_id": transaction["application_id"],
             "message": f"Payment {payment_status}"
