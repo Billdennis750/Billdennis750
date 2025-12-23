@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     mongo_url: str
     db_name: str
     cors_origins: str
+    backend_url: str
     jwt_secret: str
     jwt_algorithm: str
     access_token_expire_minutes: int
