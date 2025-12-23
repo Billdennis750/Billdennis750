@@ -31,13 +31,35 @@ const HomePage = () => {
             Money shouldn't slow you down. We give you fast loans with zero
             collateral. Straightforward. Quick. Reliable.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/apply">
-              <button className="btn-primary">Apply Now</button>
+          <div className="flex flex-col gap-6 items-center justify-center max-w-2xl mx-auto">
+            <Link to="/apply" className="w-full">
+              <button 
+                className="w-full text-white text-xl font-bold py-6 px-12 rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-3"
+                style={{ 
+                  background: 'linear-gradient(135deg, #8FEC78 0%, #81DD67 100%)',
+                  boxShadow: '0 10px 40px rgba(143, 236, 120, 0.4), 0 0 20px rgba(143, 236, 120, 0.2)',
+                  minHeight: '80px'
+                }}
+              >
+                <span>Apply Now</span>
+                <ArrowRight className="w-6 h-6" />
+              </button>
             </Link>
-            <a href="#why-choose-us">
-              <button className="btn-secondary">Learn More</button>
-            </a>
+            <Link to="/apply" className="w-full">
+              <button 
+                className="w-full text-xl font-semibold py-6 px-12 rounded-full border-2 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center space-x-3"
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px)',
+                  borderColor: 'rgba(0, 0, 0, 0.1)',
+                  color: 'var(--text-primary)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                  minHeight: '80px'
+                }}
+              >
+                <span>Calculate Your Loan</span>
+              </button>
+            </Link>
           </div>
 
           {/* Trust Indicators */}
