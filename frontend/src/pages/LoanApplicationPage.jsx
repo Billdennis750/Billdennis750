@@ -57,27 +57,68 @@ const LoanApplicationPage = () => {
     }
   };
 
-  const handleSubmit = (finalData) => {
-    // Mock submission
-    console.log('Submitting application:', finalData);
-    
-    // Store application in localStorage (mock)
-    const applicationId = `LOAN-2025-${Math.floor(Math.random() * 1000)}`;
-    const application = {
-      id: applicationId,
-      ...finalData,
-      status: 'Pending Payment',
-      createdAt: new Date().toISOString(),
-    };
-    
-    localStorage.setItem('currentApplication', JSON.stringify(application));
-    
-    toast.success('Application submitted successfully!');
-    
-    // Redirect to payment page (mock payment gateway)
-    setTimeout(() => {
-      navigate(`/payment-callback?orderRef=${applicationId}&status=success`);
-    }, 1000);
+  const handleSubmit = async (finalData) => {
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Append all form fields
+      formData.append('full_name', finalData.fullName);
+      formData.append('date_of_birth', finalData.dateOfBirth);
+      formData.append('email', finalData.email);
+      formData.append('phone', finalData.phone);
+      formData.append('home_town', finalData.homeTown);
+      formData.append('residential_address', finalData.residentialAddress);
+      formData.append('place_of_work', finalData.placeOfWork);
+      formData.append('employment_status', finalData.employmentStatus);
+      formData.append('employment_details', finalData.employmentDetails);
+      formData.append('monthly_income', finalData.monthlyIncome);
+      formData.append('loan_amount', finalData.loanAmount);
+      formData.append('loan_reason', finalData.loanReason);
+      formData.append('nin', finalData.nin);
+      formData.append('bvn', finalData.bvn);
+      
+      // Append files
+      if (finalData.idCard) {
+        formData.append('id_card', finalData.idCard);
+      }
+      if (finalData.passport) {
+        formData.append('passport', finalData.passport);
+      }
+      
+      // Submit to backend
+      const response = await axios.post(`${API}/applications/submit`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      const { application_id } = response.data;
+      
+      toast.success('Application submitted successfully!');
+      
+      // Initiate payment
+      const paymentResponse = await axios.post(`${API}/payments/initiate`, {
+        application_id: application_id,
+        customer_email: finalData.email,
+        customer_name: finalData.fullName,
+        amount: 2500,
+        redirect_url: `${window.location.origin}/payment-callback`
+      });
+      
+      const { checkout_link, order_reference } = paymentResponse.data;
+      
+      // Store order reference for verification
+      localStorage.setItem('order_reference', order_reference);
+      localStorage.setItem('application_id', application_id);
+      
+      // Redirect to Nomba payment page
+      window.location.href = checkout_link;
+      
+    } catch (error) {
+      console.error('Application submission error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to submit application');
+    }
   };
 
   const getStepTitle = () => {
