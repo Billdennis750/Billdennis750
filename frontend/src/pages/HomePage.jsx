@@ -45,7 +45,7 @@ const HomePage = () => {
                 <ArrowRight className="w-6 h-6" />
               </button>
             </Link>
-            <Link to="/apply" className="w-full">
+            <a href="#why-choose-us" className="w-full">
               <button 
                 className="w-full text-xl font-semibold py-6 px-12 rounded-full border-2 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center space-x-3"
                 style={{ 
@@ -59,7 +59,7 @@ const HomePage = () => {
               >
                 <span>Learn More</span>
               </button>
-            </Link>
+            </a>
           </div>
 
           {/* Trust Indicators */}
