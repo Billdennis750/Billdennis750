@@ -1,4 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const AuthContext = createContext(null);
 
@@ -8,33 +12,81 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in from localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
+    // Check if user is logged in from token
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Verify token and get user info
+      fetchUserInfo(token);
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  const login = (email, password) => {
-    // Mock login - in real app, this would call backend API
-    const mockUser = {
-      id: 'user_001',
-      name: 'John Doe',
-      email: email,
-      role: email.includes('admin') ? 'admin' : 'user',
-    };
-    setUser(mockUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    return { success: true };
+  const fetchUserInfo = async (token) => {
+    try {
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setUser(response.data);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+      localStorage.removeItem('token');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (email, password) => {
+    try {
+      const response = await axios.post(`${API}/auth/login`, {
+        email,
+        password
+      });
+      
+      const { access_token, user: userData } = response.data;
+      
+      // Store token
+      localStorage.setItem('token', access_token);
+      
+      setUser(userData);
+      setIsAuthenticated(true);
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Login failed:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.detail || 'Login failed' 
+      };
+    }
+  };
+
+  const register = async (email, password, fullName, phone) => {
+    try {
+      const response = await axios.post(`${API}/auth/register`, {
+        email,
+        password,
+        full_name: fullName,
+        phone
+      });
+      
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.detail || 'Registration failed' 
+      };
+    }
   };
 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   const value = {
@@ -42,6 +94,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     loading,
     login,
+    register,
     logout,
   };
 
