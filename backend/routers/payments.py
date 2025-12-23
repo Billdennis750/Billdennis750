@@ -72,7 +72,7 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             "customerName": payment.customer_name,
             "orderReference": order_reference,
             "redirectUrl": payment.redirect_url,
-            "callbackUrl": f"{settings.nomba_base_url}/api/webhooks/nomba",
+            "callbackUrl": f"{settings.backend_url}/api/webhooks/nomba",
             "description": "Loan Processing Fee",
             "metadata": {
                 "application_id": payment.application_id,
