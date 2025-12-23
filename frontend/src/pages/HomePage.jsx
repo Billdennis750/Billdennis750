@@ -11,29 +11,10 @@ import {
   Clock,
   BadgeCheck,
   Users,
-} from 'lucide-react';
-import { mockPartners } from '../mock';
-
-const HomePage = () => {
-  return (
-    <div>
-      <Header />
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import {
-  Zap,
-  Shield,
-  Calendar,
-  CheckCircle,
-  ArrowRight,
-  Clock,
-  BadgeCheck,
-  Users,
   Star,
   Calculator,
+  TrendingUp,
+  Target,
 } from 'lucide-react';
 import { mockPartners } from '../mock';
 
