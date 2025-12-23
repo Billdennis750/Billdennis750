@@ -101,14 +101,22 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                 logger.info(f"Xixapay VA response status: {response.status_code}")
                 logger.info(f"Xixapay VA response: {response.text}")
                 
-                if response.status_code == 200:
+                if response.status_code in [200, 201]:
                     xixapay_response = response.json()
-                    data = xixapay_response.get("data", xixapay_response)
                     
-                    # Extract virtual account details
-                    virtual_account_number = data.get("accountNumber") or data.get("account_number")
-                    virtual_account_bank = data.get("bankName") or data.get("bank_name") or "Partner Bank"
-                    xixapay_reference = data.get("reference") or data.get("accountReference") or order_reference
+                    # Handle Xixapay's response structure
+                    bank_accounts = xixapay_response.get("bankAccounts", [])
+                    if bank_accounts:
+                        account = bank_accounts[0]  # Get first bank account
+                        virtual_account_number = account.get("accountNumber")
+                        virtual_account_bank = account.get("bankName", "Partner Bank")
+                        xixapay_reference = account.get("Reserved_Account_Id") or account.get("externalReference") or order_reference
+                    else:
+                        # Fallback to other possible response formats
+                        data = xixapay_response.get("data", xixapay_response)
+                        virtual_account_number = data.get("accountNumber") or data.get("account_number")
+                        virtual_account_bank = data.get("bankName") or data.get("bank_name") or "Partner Bank"
+                        xixapay_reference = data.get("reference") or data.get("accountReference") or order_reference
                     
                     # For virtual accounts, the checkout "link" is the bank transfer info
                     # We'll create a special URL that shows the bank transfer details
