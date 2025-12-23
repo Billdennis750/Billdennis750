@@ -10,6 +10,7 @@ import HomePage from './pages/HomePage';
 import LoanApplicationPage from './pages/LoanApplicationPage';
 import PaymentCallbackPage from './pages/PaymentCallbackPage';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
