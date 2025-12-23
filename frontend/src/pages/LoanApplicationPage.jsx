@@ -112,7 +112,7 @@ const LoanApplicationPage = () => {
       localStorage.setItem('order_reference', order_reference);
       localStorage.setItem('application_id', application_id);
       
-      // Redirect to Nomba payment page
+      // Redirect to Xixapay payment page
       window.location.href = checkout_link;
       
     } catch (error) {
