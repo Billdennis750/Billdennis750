@@ -143,39 +143,48 @@ backend:
 
   - task: "Xixapay Payment Initiation API"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/routers/payments.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Just implemented Xixapay integration replacing failed Nomba. Needs testing with real Xixapay API."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL: Payment initiation fails with 502 Bad Gateway. Xixapay API endpoint '/api/v1/payment/initiate' returns 404 Not Found. The endpoint URL used in implementation appears to be incorrect. Tested with valid application data but Xixapay API responds with HTML 404 page. This completely breaks the payment flow."
 
   - task: "Xixapay Payment Verification API"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/routers/payments.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented verification endpoint for Xixapay. Needs testing."
+      - working: false
+        agent: "testing"
+        comment: "Cannot test verification as payment initiation fails. The verification endpoint logic appears correct but depends on valid order references from successful payment initiation. Error handling works correctly for invalid order references (returns 404 as expected)."
 
   - task: "Xixapay Webhook Handler"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/routers/payments.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented webhook handler for Xixapay payment notifications."
+      - working: false
+        agent: "testing"
+        comment: "Cannot test webhook handler as payment initiation fails. The webhook logic appears correct but depends on valid transactions. Tested with sample webhook payload but without valid order references from successful payments, full flow cannot be verified."
 
   - task: "Admin Dashboard API"
     implemented: true
