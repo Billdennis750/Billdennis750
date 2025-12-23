@@ -3,7 +3,7 @@ from models.application import LoanApplicationCreate, LoanApplication, Applicati
 from utils.auth import get_current_user
 from utils.email import email_service
 from database import get_db
-from datetime import datetime, date
+from datetime import datetime
 from config import get_settings
 import os
 import aiofiles
