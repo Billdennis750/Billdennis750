@@ -102,6 +102,7 @@ const LoanApplicationPage = () => {
         application_id: application_id,
         customer_email: finalData.email,
         customer_name: finalData.fullName,
+        customer_phone: finalData.phone,
         amount: 2500,
         redirect_url: `${window.location.origin}/payment-callback`
       });
