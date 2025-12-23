@@ -12,6 +12,8 @@ from pathlib import Path
 # Load environment variables
 import sys
 sys.path.append('/app/backend')
+from dotenv import load_dotenv
+load_dotenv('/app/backend/.env')
 from config import get_settings
 
 async def test_xixapay_api():
