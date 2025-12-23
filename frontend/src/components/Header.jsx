@@ -12,9 +12,11 @@ const Header = () => {
     <header className="nav-header">
       <div className="flex items-center">
         <Link to="/" className="flex items-center space-x-2">
-          <div className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            Cashflow MFB
-          </div>
+          <img 
+            src="https://customer-assets.emergentagent.com/job_easy-loan-access/artifacts/nsaqwx8u_1000315618-removebg-preview.png" 
+            alt="Cashflow MFB" 
+            className="h-10 w-auto"
+          />
         </Link>
       </div>
 
