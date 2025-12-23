@@ -123,33 +123,33 @@ const UserDashboard = () => {
               <CardTitle>Application Details</CardTitle>
             </CardHeader>
             <CardContent>
-              {application ? (
+              {loading ? (
+                <div className="text-center py-8">
+                  <p className="body-medium">Loading...</p>
+                </div>
+              ) : recentApplication ? (
                 <div className="space-y-4">
                   <div>
                     <p className="body-small" style={{ color: 'var(--text-muted)' }}>Application ID</p>
-                    <p className="body-medium font-mono">{application.id}</p>
+                    <p className="body-medium font-mono">{recentApplication.application_id}</p>
                   </div>
                   <div>
                     <p className="body-small" style={{ color: 'var(--text-muted)' }}>Loan Amount</p>
-                    <p className="body-medium">₦{Number(application.loanAmount).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="body-small" style={{ color: 'var(--text-muted)' }}>Purpose</p>
-                    <p className="body-medium">{application.loanReason}</p>
+                    <p className="body-medium">₦{Number(recentApplication.loan_amount).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="body-small" style={{ color: 'var(--text-muted)' }}>Status</p>
                     <span className="px-3 py-1 rounded-full text-sm font-medium"
                           style={{ 
-                            background: application.status === 'Under Review' ? 'var(--accent-wash)' : 'var(--bg-section)',
+                            background: recentApplication.status === 'under_review' ? 'var(--accent-wash)' : 'var(--bg-section)',
                             color: 'var(--accent-text)'
                           }}>
-                      {application.status}
+                      {recentApplication.status}
                     </span>
                   </div>
                   <div>
                     <p className="body-small" style={{ color: 'var(--text-muted)' }}>Applied On</p>
-                    <p className="body-medium">{new Date(application.createdAt).toLocaleDateString()}</p>
+                    <p className="body-medium">{new Date(recentApplication.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
               ) : (
