@@ -12,6 +12,7 @@ import PaymentCallbackPage from './pages/PaymentCallbackPage';
 import LoginPage from './pages/LoginPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
