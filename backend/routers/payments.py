@@ -55,8 +55,8 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                 detail="Application not found"
             )
         
-        # Get Nomba access token
-        access_token = await get_nomba_access_token()
+        # Get Nomba headers
+        headers = await get_nomba_headers()
         
         # Create order reference
         order_reference = f"{payment.application_id}-{int(datetime.now().timestamp())}"
@@ -80,11 +80,8 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         # Create checkout order with Nomba
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{settings.nomba_base_url}/checkout/order",
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json"
-                },
+                f"{settings.nomba_base_url}/v1/checkout/order",
+                headers=headers,
                 json=checkout_payload,
                 timeout=15.0
             )
