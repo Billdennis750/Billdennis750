@@ -3,13 +3,13 @@ from pydantic import BaseModel
 from database import get_db
 from config import get_settings
 from utils.email import email_service
-from datetime import datetime
+from datetime import datetime, timezone
 import httpx
 import logging
 import hmac
 import hashlib
-import base64
 import json
+import uuid
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -25,27 +25,19 @@ class PaymentInitiate(BaseModel):
 class PaymentVerify(BaseModel):
     order_ref: str
 
-async def get_nomba_headers():
-    """Get Nomba API headers with authentication"""
-    try:
-        # Nomba uses accountId and privateKey for authentication
-        auth_string = f"{settings.nomba_account_id}:{settings.nomba_private_key}"
-        auth_bytes = auth_string.encode('utf-8')
-        auth_b64 = base64.b64encode(auth_bytes).decode('utf-8')
-        
-        return {
-            "Authorization": f"Bearer {auth_b64}",
-            "Content-Type": "application/json"
-        }
-    except Exception as e:
-        logger.error(f"Failed to create Nomba headers: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Payment gateway configuration error"
-        )
+
+def get_xixapay_headers():
+    """Get Xixapay API headers with authentication"""
+    return {
+        "api-key": settings.xixapay_api_key,
+        "Authorization": f"Bearer {settings.xixapay_public_key}",
+        "Content-Type": "application/json"
+    }
+
 
 @router.post("/initiate", response_model=dict)
 async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
+    """Initiate a payment transaction with Xixapay"""
     try:
         # Verify application exists
         application = await db.applications.find_one({"application_id": payment.application_id})
@@ -55,48 +47,65 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                 detail="Application not found"
             )
         
-        # Create order reference
-        order_reference = f"{payment.application_id}-{int(datetime.now().timestamp())}"
+        # Create unique order reference
+        order_reference = f"CASHFLOW-{payment.application_id}-{int(datetime.now(timezone.utc).timestamp())}"
+        
+        # Prepare Xixapay payment payload
+        payment_payload = {
+            "merchantId": settings.xixapay_merchant_id,
+            "merchantTransactionId": order_reference,
+            "amount": int(payment.amount),  # Xixapay expects integer amount in Naira
+            "currency": "NGN",
+            "description": "Loan Processing Fee - Cashflow MFB",
+            "customer": {
+                "name": payment.customer_name,
+                "email": payment.customer_email,
+            },
+            "callbackUrl": f"{settings.backend_url}/api/payments/webhook",
+            "redirectUrl": payment.redirect_url,
+            "metadata": {
+                "application_id": payment.application_id,
+                "fee_type": "processing_fee"
+            }
+        }
+        
+        checkout_link = None
+        xixapay_reference = None
         
         try:
-            # Try real Nomba integration
-            headers = await get_nomba_headers()
-            
-            # Prepare checkout payload
-            checkout_payload = {
-                "amount": int(payment.amount * 100),  # Convert to kobo
-                "currency": "NGN",
-                "customerEmail": payment.customer_email,
-                "customerName": payment.customer_name,
-                "orderReference": order_reference,
-                "redirectUrl": payment.redirect_url,
-                "callbackUrl": f"{settings.backend_url}/api/webhooks/nomba",
-                "description": "Loan Processing Fee",
-                "metadata": {
-                    "application_id": payment.application_id,
-                    "fee_type": "processing_fee"
-                }
-            }
-            
-            # Create checkout order with Nomba
-            async with httpx.AsyncClient() as client:
+            # Create payment with Xixapay
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{settings.nomba_base_url}/v1/checkout/order",
-                    headers=headers,
-                    json=checkout_payload,
-                    timeout=15.0
+                    f"{settings.xixapay_base_url}/api/v1/payment/initiate",
+                    headers=get_xixapay_headers(),
+                    json=payment_payload
                 )
-                response.raise_for_status()
-                checkout_response = response.json()
-            
-            checkout_link = checkout_response.get("checkoutLink")
-            checkout_id = checkout_response.get("checkoutId")
-            
-        except Exception as nomba_error:
-            logger.warning(f"Nomba API failed, using mock payment: {str(nomba_error)}")
-            # Fallback to mock payment for testing
-            checkout_link = f"{payment.redirect_url}?orderRef={order_reference}&status=success"
-            checkout_id = f"mock_{order_reference}"
+                
+                logger.info(f"Xixapay response status: {response.status_code}")
+                logger.info(f"Xixapay response: {response.text}")
+                
+                if response.status_code == 200:
+                    xixapay_response = response.json()
+                    checkout_link = xixapay_response.get("data", {}).get("authorizationUrl") or xixapay_response.get("authorizationUrl")
+                    xixapay_reference = xixapay_response.get("data", {}).get("reference") or xixapay_response.get("reference")
+                else:
+                    # Log the error but continue with fallback
+                    logger.error(f"Xixapay API error: {response.status_code} - {response.text}")
+                    raise Exception(f"Xixapay API returned {response.status_code}")
+                    
+        except Exception as xixapay_error:
+            logger.error(f"Xixapay payment initiation failed: {str(xixapay_error)}")
+            # Return error - no mock fallback as per user's requirement for real payment
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Payment gateway error: {str(xixapay_error)}"
+            )
+        
+        if not checkout_link:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to get payment URL from Xixapay"
+            )
         
         # Store transaction record
         transaction_doc = {
@@ -106,14 +115,14 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             "customer_name": payment.customer_name,
             "amount": payment.amount,
             "currency": "NGN",
-            "nomba_checkout_id": checkout_id,
+            "xixapay_reference": xixapay_reference,
             "status": "initiated",
             "transaction_reference": None,
             "payment_method": None,
             "webhook_received": False,
             "webhook_verified": False,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
         }
         
         await db.transactions.insert_one(transaction_doc)
@@ -123,6 +132,7 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             "order_reference": order_reference,
             "status": "initiated"
         }
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -132,8 +142,10 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             detail="Failed to initiate payment"
         )
 
+
 @router.post("/verify", response_model=dict)
 async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
+    """Verify payment status with Xixapay"""
     try:
         # Find transaction
         transaction = await db.transactions.find_one({"order_reference": verify.order_ref})
@@ -147,37 +159,41 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
         transaction_reference = ""
         
         try:
-            # Try real Nomba verification
-            headers = await get_nomba_headers()
-            
-            # Query Nomba for transaction status
-            async with httpx.AsyncClient() as client:
+            # Verify payment with Xixapay
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
-                    f"{settings.nomba_base_url}/v1/checkout/order/{verify.order_ref}",
-                    headers=headers,
-                    timeout=15.0
+                    f"{settings.xixapay_base_url}/api/v1/payment/verify/{verify.order_ref}",
+                    headers=get_xixapay_headers()
                 )
-                response.raise_for_status()
-                nomba_transaction = response.json()
-            
-            # Determine payment status
-            nomba_status = nomba_transaction.get("status", "").lower()
-            status_map = {
-                "completed": "completed",
-                "successful": "completed",
-                "pending": "pending",
-                "failed": "failed",
-                "cancelled": "failed"
-            }
-            payment_status = status_map.get(nomba_status, "pending")
-            transaction_reference = nomba_transaction.get("transactionReference", "")
-            
-        except Exception as nomba_error:
-            logger.warning(f"Nomba verification failed, using mock: {str(nomba_error)}")
-            # Fallback to mock verification - mark as completed
-            if transaction["nomba_checkout_id"].startswith("mock_"):
-                payment_status = "completed"
-                transaction_reference = f"MOCK-TXN-{int(datetime.now().timestamp())}"
+                
+                logger.info(f"Xixapay verify response: {response.status_code} - {response.text}")
+                
+                if response.status_code == 200:
+                    xixapay_data = response.json()
+                    data = xixapay_data.get("data", xixapay_data)
+                    
+                    # Map Xixapay status to our status
+                    xixapay_status = data.get("status", "").lower()
+                    status_map = {
+                        "success": "completed",
+                        "successful": "completed",
+                        "completed": "completed",
+                        "paid": "completed",
+                        "pending": "pending",
+                        "processing": "pending",
+                        "failed": "failed",
+                        "cancelled": "failed",
+                        "abandoned": "failed"
+                    }
+                    payment_status = status_map.get(xixapay_status, "pending")
+                    transaction_reference = data.get("transactionReference") or data.get("reference") or ""
+                else:
+                    logger.warning(f"Xixapay verification returned {response.status_code}")
+                    
+        except Exception as verify_error:
+            logger.error(f"Xixapay verification error: {str(verify_error)}")
+            # Return current known status from database
+            payment_status = transaction.get("status", "pending")
         
         # Update transaction
         await db.transactions.update_one(
@@ -186,7 +202,7 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
                 "status": payment_status,
                 "transaction_reference": transaction_reference,
                 "payment_method": "card",
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -198,20 +214,24 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
                 {"$set": {
                     "payment_status": "paid",
                     "status": "under_review",
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }}
             )
             
-            # Get application details
+            # Get application details for email
             application = await db.applications.find_one({"application_id": application_id})
             
-            # Send email notification
-            await email_service.send_application_received(
-                application["email"],
-                application["full_name"],
-                application_id,
-                application["loan_amount"]
-            )
+            if application:
+                # Send email notification
+                try:
+                    await email_service.send_application_received(
+                        application.get("email"),
+                        application.get("full_name"),
+                        application_id,
+                        application.get("loan_amount")
+                    )
+                except Exception as email_error:
+                    logger.error(f"Failed to send email notification: {email_error}")
         
         return {
             "payment_status": payment_status,
@@ -220,6 +240,7 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
             "application_id": transaction["application_id"],
             "message": f"Payment {payment_status}"
         }
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -229,56 +250,76 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
             detail="Failed to verify payment"
         )
 
-@router.post("/webhooks/nomba")
-async def nomba_webhook(request: Request, db=Depends(get_db)):
-    """Handle Nomba payment webhooks"""
+
+@router.post("/webhook")
+async def xixapay_webhook(request: Request, db=Depends(get_db)):
+    """Handle Xixapay payment webhooks"""
     try:
-        # Get raw body for signature verification
+        # Get raw body
         body = await request.body()
-        signature = request.headers.get("X-Nomba-Signature")
         
-        if not signature:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing signature"
-            )
+        # Optional: Verify webhook signature if Xixapay provides one
+        signature = request.headers.get("xixapay-signature") or request.headers.get("x-xixapay-signature")
         
-        # Verify signature
-        if not verify_webhook_signature(body, signature, settings.nomba_webhook_secret):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid signature"
-            )
+        if signature and settings.xixapay_webhook_secret:
+            # Verify signature using HMAC-SHA256
+            expected_signature = hmac.new(
+                settings.xixapay_webhook_secret.encode('utf-8'),
+                body,
+                hashlib.sha256
+            ).hexdigest()
+            
+            if not hmac.compare_digest(signature, expected_signature):
+                logger.warning("Invalid webhook signature received")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid signature"
+                )
         
         # Parse webhook data
         webhook_data = json.loads(body)
-        order_ref = webhook_data.get("reference")
+        logger.info(f"Received Xixapay webhook: {webhook_data}")
+        
+        # Extract transaction details
+        order_ref = webhook_data.get("merchantTransactionId") or webhook_data.get("reference") or webhook_data.get("order_reference")
+        notification_status = webhook_data.get("status", "").lower()
+        transaction_id = webhook_data.get("transactionId") or webhook_data.get("transaction_id")
+        
+        if not order_ref:
+            logger.warning("Webhook missing order reference")
+            return {"status": "ok", "message": "No order reference provided"}
         
         # Find transaction
         transaction = await db.transactions.find_one({"order_reference": order_ref})
         if not transaction:
-            logger.warning(f"Transaction not found for webhook: {order_ref}")
-            return {"status": "ok"}
+            # Try finding by xixapay reference
+            transaction = await db.transactions.find_one({"xixapay_reference": order_ref})
         
-        # Update transaction status
-        nomba_status = webhook_data.get("status", "").lower()
+        if not transaction:
+            logger.warning(f"Transaction not found for webhook: {order_ref}")
+            return {"status": "ok", "message": "Transaction not found"}
+        
+        # Map status
         status_map = {
             "success": "completed",
             "successful": "completed",
             "completed": "completed",
+            "paid": "completed",
             "failed": "failed",
-            "cancelled": "failed"
+            "cancelled": "failed",
+            "abandoned": "failed"
         }
-        payment_status = status_map.get(nomba_status, "pending")
+        payment_status = status_map.get(notification_status, "pending")
         
+        # Update transaction
         await db.transactions.update_one(
-            {"order_reference": order_ref},
+            {"order_reference": transaction["order_reference"]},
             {"$set": {
                 "status": payment_status,
-                "transaction_reference": webhook_data.get("transactionId"),
+                "transaction_reference": transaction_id,
                 "webhook_received": True,
                 "webhook_verified": True,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -290,11 +331,20 @@ async def nomba_webhook(request: Request, db=Depends(get_db)):
                 {"$set": {
                     "payment_status": "paid",
                     "status": "under_review",
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }}
             )
+            
+            logger.info(f"Application {application_id} marked as paid via webhook")
         
-        return {"status": "success"}
+        return {"status": "success", "message": "Webhook processed"}
+        
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON in webhook payload")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid JSON payload"
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -303,20 +353,3 @@ async def nomba_webhook(request: Request, db=Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Webhook processing failed"
         )
-
-def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
-    """Verify Nomba webhook signature"""
-    try:
-        if not signature.startswith("v1,"):
-            return False
-        
-        provided_signature = signature.split(",")[1]
-        provided_signature_bytes = base64.b64decode(provided_signature)
-        
-        secret_bytes = secret.encode() if isinstance(secret, str) else secret
-        expected_signature = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
-        
-        return hmac.compare_digest(expected_signature, provided_signature_bytes)
-    except Exception as e:
-        logger.error(f"Signature verification error: {str(e)}")
-        return False
