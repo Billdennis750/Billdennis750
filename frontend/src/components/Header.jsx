@@ -22,9 +22,9 @@ const Header = () => {
 
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center space-x-1">
-        <a href="#about" className="nav-link body-medium">
+        <Link to="/about" className="nav-link body-medium">
           About
-        </a>
+        </Link>
         <a href="#why-choose-us" className="nav-link body-medium">
           Why Us
         </a>
