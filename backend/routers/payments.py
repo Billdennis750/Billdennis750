@@ -25,26 +25,23 @@ class PaymentInitiate(BaseModel):
 class PaymentVerify(BaseModel):
     order_ref: str
 
-async def get_nomba_access_token():
-    """Get OAuth2 access token from Nomba"""
+async def get_nomba_headers():
+    """Get Nomba API headers with authentication"""
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{settings.nomba_base_url}/oauth/token",
-                json={
-                    "client_id": settings.nomba_client_id,
-                    "client_secret": settings.nomba_private_key,
-                    "grant_type": "client_credentials"
-                },
-                timeout=15.0
-            )
-            response.raise_for_status()
-            return response.json().get("access_token")
+        # Nomba uses accountId and privateKey for authentication
+        auth_string = f"{settings.nomba_account_id}:{settings.nomba_private_key}"
+        auth_bytes = auth_string.encode('utf-8')
+        auth_b64 = base64.b64encode(auth_bytes).decode('utf-8')
+        
+        return {
+            "Authorization": f"Bearer {auth_b64}",
+            "Content-Type": "application/json"
+        }
     except Exception as e:
-        logger.error(f"Failed to get Nomba token: {str(e)}")
+        logger.error(f"Failed to create Nomba headers: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Payment gateway unavailable"
+            detail="Payment gateway configuration error"
         )
 
 @router.post("/initiate", response_model=dict)
