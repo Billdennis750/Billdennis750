@@ -40,18 +40,19 @@ const LoanPreferencesStep = ({ initialData, onNext, onBack }) => {
     },
   });
 
-  const watchedValues = form.watch();
+  // Watch specific fields instead of entire form to prevent infinite loops
+  const loanAmount = form.watch('loanAmount');
+  const repaymentDuration = form.watch('repaymentDuration');
+  const repaymentFrequency = form.watch('repaymentFrequency');
 
   useEffect(() => {
-    const { loanAmount, repaymentDuration, repaymentFrequency } = watchedValues;
-    
     if (loanAmount && repaymentDuration && repaymentFrequency) {
       const amount = parseFloat(loanAmount);
-      if (amount > 0) {
+      if (amount > 0 && !isNaN(amount)) {
         calculateRepayment(amount, repaymentDuration, repaymentFrequency);
       }
     }
-  }, [watchedValues]);
+  }, [loanAmount, repaymentDuration, repaymentFrequency]);
 
   const calculateRepayment = (loanAmount, duration, frequency) => {
     // Interest rate: 5% per month
