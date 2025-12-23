@@ -9,13 +9,16 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str
     access_token_expire_minutes: int
-    nomba_client_id: str
-    nomba_private_key: str
-    nomba_account_id: str
-    nomba_base_url: str
-    nomba_webhook_secret: str
+    # Xixapay Payment Gateway
+    xixapay_api_key: str
+    xixapay_public_key: str
+    xixapay_merchant_id: str
+    xixapay_base_url: str = "https://api.xixapay.com"
+    xixapay_webhook_secret: str = ""
+    # SendGrid Email
     sendgrid_api_key: str
     sendgrid_from_email: str
+    # File Upload
     upload_dir: str
     max_file_size: int
     
