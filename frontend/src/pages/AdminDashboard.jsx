@@ -68,13 +68,30 @@ const AdminDashboard = () => {
     navigate('/');
   };
 
-  const handleStatusChange = (appId, newStatus) => {
-    setApplications(apps => 
-      apps.map(app => 
-        app.id === appId ? { ...app, status: newStatus } : app
-      )
-    );
-    toast.success(`Application ${appId} status updated to ${newStatus}`);
+  const handleStatusChange = async (appId, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API}/applications/${appId}/status`,
+        { status: newStatus, notes: `Status updated to ${newStatus}` },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Update local state
+      setApplications(apps => 
+        apps.map(app => 
+          app.application_id === appId ? { ...app, status: newStatus } : app
+        )
+      );
+      
+      toast.success(`Application ${appId} status updated to ${newStatus}`);
+      
+      // Refresh data
+      fetchData();
+    } catch (error) {
+      console.error('Status update failed:', error);
+      toast.error('Failed to update status');
+    }
   };
 
   const stats = [
