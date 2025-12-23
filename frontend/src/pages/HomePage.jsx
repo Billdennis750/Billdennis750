@@ -57,7 +57,7 @@ const HomePage = () => {
                   minHeight: '80px'
                 }}
               >
-                <span>Calculate Your Loan</span>
+                <span>Learn More</span>
               </button>
             </Link>
           </div>
