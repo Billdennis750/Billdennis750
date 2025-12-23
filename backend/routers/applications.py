@@ -63,7 +63,7 @@ async def submit_application(
             "application_id": application_id,
             "user_id": None,
             "full_name": full_name,
-            "date_of_birth": date.fromisoformat(date_of_birth),
+            "date_of_birth": datetime.fromisoformat(date_of_birth),
             "email": email,
             "phone": phone,
             "home_town": home_town,
