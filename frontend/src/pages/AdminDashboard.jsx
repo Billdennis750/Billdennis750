@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -15,7 +15,6 @@ import {
   Mail,
   Phone,
 } from 'lucide-react';
-import { mockLoanApplications, mockAdminStats } from '../mock';
 import {
   Select,
   SelectContent,
@@ -24,12 +23,45 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [applications, setApplications] = useState(mockLoanApplications);
+  const [applications, setApplications] = useState([]);
+  const [stats, setStats] = useState(null);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Fetch applications
+      const appsResponse = await axios.get(`${API}/applications/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setApplications(appsResponse.data.applications);
+      
+      // Fetch stats
+      const statsResponse = await axios.get(`${API}/admin/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStats(statsResponse.data);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
