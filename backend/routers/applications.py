@@ -163,7 +163,6 @@ async def get_all_applications(
             app["_id"] = str(app["_id"])
             app["created_at"] = app["created_at"].isoformat()
             app["updated_at"] = app["updated_at"].isoformat()
-            app["date_of_birth"] = app["date_of_birth"].isoformat()
         
         return {
             "applications": applications,
