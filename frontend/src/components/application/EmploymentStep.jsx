@@ -27,7 +27,6 @@ const schema = z.object({
   employmentDetails: z.string().min(10, 'Employment details are required'),
   monthlyIncome: z.string().min(1, 'Monthly income is required'),
   loanReason: z.string().min(10, 'Please provide reason for loan'),
-  loanAmount: z.string().min(1, 'Loan amount is required'),
 });
 
 const EmploymentStep = ({ initialData, onNext, onBack }) => {
@@ -39,7 +38,6 @@ const EmploymentStep = ({ initialData, onNext, onBack }) => {
       employmentDetails: initialData.employmentDetails || '',
       monthlyIncome: initialData.monthlyIncome || '',
       loanReason: initialData.loanReason || '',
-      loanAmount: initialData.loanAmount || '',
     },
   });
 
@@ -57,7 +55,7 @@ const EmploymentStep = ({ initialData, onNext, onBack }) => {
             <FormItem>
               <FormLabel>Place of Work *</FormLabel>
               <FormControl>
-                <Input placeholder="Company Name" {...field} />
+                <Input placeholder="Company/Business Name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -77,9 +75,11 @@ const EmploymentStep = ({ initialData, onNext, onBack }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="employed">Employed</SelectItem>
+                  <SelectItem value="employed">Employed (Full-Time)</SelectItem>
+                  <SelectItem value="part-time">Employed (Part-Time)</SelectItem>
                   <SelectItem value="self-employed">Self-Employed</SelectItem>
                   <SelectItem value="business-owner">Business Owner</SelectItem>
+                  <SelectItem value="contractor">Contractor/Freelancer</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -95,7 +95,8 @@ const EmploymentStep = ({ initialData, onNext, onBack }) => {
               <FormLabel>Employment Details *</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Describe your employment, job role, or business"
+                  placeholder="Describe your job role, responsibilities, or business activities"
+                  className="min-h-[100px]"
                   {...field}
                 />
               </FormControl>
@@ -111,21 +112,11 @@ const EmploymentStep = ({ initialData, onNext, onBack }) => {
             <FormItem>
               <FormLabel>Monthly Income (₦) *</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="250000" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="loanAmount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Loan Amount (₦) *</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="1000000" {...field} />
+                <Input 
+                  type="number" 
+                  placeholder="250000" 
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -140,7 +131,8 @@ const EmploymentStep = ({ initialData, onNext, onBack }) => {
               <FormLabel>Reason for Loan *</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Explain why you need this loan and how you plan to use it"
+                  placeholder="Explain why you need this loan and how you plan to use it (e.g., business expansion, equipment purchase, working capital, etc.)"
+                  className="min-h-[100px]"
                   {...field}
                 />
               </FormControl>
