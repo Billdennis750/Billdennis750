@@ -94,28 +94,28 @@ const AdminDashboard = () => {
     }
   };
 
-  const stats = [
+  const statsData = [
     {
       title: 'Total Applications',
-      value: mockAdminStats.totalApplications,
+      value: stats?.total_applications || 0,
       icon: FileText,
       color: 'var(--accent-text)',
     },
     {
       title: 'Pending Review',
-      value: mockAdminStats.pendingReview,
+      value: stats?.pending_review || 0,
       icon: Clock,
       color: '#f59e0b',
     },
     {
       title: 'Approved',
-      value: mockAdminStats.approved,
+      value: stats?.approved || 0,
       icon: CheckCircle,
       color: 'var(--accent-text)',
     },
     {
       title: 'Total Disbursed',
-      value: `₦${(mockAdminStats.totalDisbursed / 1000000).toFixed(1)}M`,
+      value: stats ? `₦${(stats.total_disbursed / 1000000).toFixed(1)}M` : '₦0',
       icon: DollarSign,
       color: 'var(--accent-text)',
     },
