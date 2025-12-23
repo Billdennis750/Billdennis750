@@ -50,9 +50,9 @@ const Footer = () => {
             </h4>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="body-small hover:text-green-600">
+                <Link to="/privacy-policy" className="body-small hover:text-green-600">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="body-small hover:text-green-600">
