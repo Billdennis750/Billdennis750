@@ -172,35 +172,12 @@ const UserDashboard = () => {
               <CardTitle>Repayment Schedule</CardTitle>
             </CardHeader>
             <CardContent>
-              {application && application.status === 'Approved' ? (
-                <div className="space-y-4">
-                  {mockRepaymentSchedule.map((payment) => (
-                    <div key={payment.id} className="flex justify-between items-center p-4 rounded-lg"
-                         style={{ background: 'var(--bg-section)' }}>
-                      <div>
-                        <p className="body-medium">₦{payment.amount.toLocaleString()}</p>
-                        <p className="body-small" style={{ color: 'var(--text-muted)' }}>
-                          Due: {payment.dueDate}
-                        </p>
-                      </div>
-                      <span className="px-3 py-1 rounded-full text-sm"
-                            style={{ 
-                              background: payment.status === 'Upcoming' ? 'var(--accent-wash)' : 'var(--bg-section)',
-                              color: 'var(--text-body)'
-                            }}>
-                        {payment.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
-                  <p className="body-small" style={{ color: 'var(--text-secondary)' }}>
-                    Your repayment schedule will appear here once your loan is approved.
-                  </p>
-                </div>
-              )}
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+                <p className="body-small" style={{ color: 'var(--text-secondary)' }}>
+                  Your repayment schedule will appear here once your loan is approved.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -210,34 +187,12 @@ const UserDashboard = () => {
               <CardTitle>Transaction History</CardTitle>
             </CardHeader>
             <CardContent>
-              {application && application.paymentStatus === 'Paid' ? (
-                <div className="space-y-4">
-                  {mockTransactions.map((txn) => (
-                    <div key={txn.id} className="flex justify-between items-center p-4 rounded-lg"
-                         style={{ background: 'var(--bg-section)' }}>
-                      <div>
-                        <p className="body-medium">{txn.type}</p>
-                        <p className="body-small" style={{ color: 'var(--text-muted)' }}>
-                          {txn.date}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="body-medium font-semibold">₦{txn.amount.toLocaleString()}</p>
-                        <p className="body-small" style={{ color: 'var(--accent-text)' }}>
-                          {txn.status}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <CreditCard className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
-                  <p className="body-small" style={{ color: 'var(--text-secondary)' }}>
-                    No transactions yet.
-                  </p>
-                </div>
-              )}
+              <div className="text-center py-8">
+                <CreditCard className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+                <p className="body-small" style={{ color: 'var(--text-secondary)' }}>
+                  Your transaction history will appear here.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
