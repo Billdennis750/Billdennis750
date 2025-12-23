@@ -133,14 +133,14 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
                 detail="Transaction not found"
             )
         
-        # Get Nomba access token
-        access_token = await get_nomba_access_token()
+        # Get Nomba headers
+        headers = await get_nomba_headers()
         
         # Query Nomba for transaction status
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{settings.nomba_base_url}/checkout/order/{verify.order_ref}",
-                headers={"Authorization": f"Bearer {access_token}"},
+                f"{settings.nomba_base_url}/v1/checkout/order/{verify.order_ref}",
+                headers=headers,
                 timeout=15.0
             )
             response.raise_for_status()
