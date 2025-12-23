@@ -225,6 +225,9 @@ frontend:
       - working: true
         agent: "main"
         comment: "Screenshot confirmed homepage is loading correctly"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Homepage loading correctly with hero text 'Get ₦1.5M – ₦15M. No Collateral. No Stress.' Apply Now button functional and navigates to /apply page successfully. All UI elements rendering properly."
 
   - task: "Loan Application Form"
     implemented: true
