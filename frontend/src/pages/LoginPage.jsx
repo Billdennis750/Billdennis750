@@ -42,19 +42,19 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const onSubmit = (data) => {
-    const result = login(data.email, data.password);
+  const onSubmit = async (data) => {
+    const result = await login(data.email, data.password);
     if (result.success) {
       toast.success('Login successful!');
       
       // Redirect based on role
-      if (data.email.includes('admin')) {
+      if (result.user.role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/dashboard');
       }
     } else {
-      toast.error('Invalid credentials');
+      toast.error(result.error || 'Invalid credentials');
     }
   };
 
