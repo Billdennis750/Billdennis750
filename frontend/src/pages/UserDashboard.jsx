@@ -75,7 +75,7 @@ const UserDashboard = () => {
                     Application Status
                   </p>
                   <p className="heading-3 mt-1">
-                    {application ? application.status : 'No Active Application'}
+                    {recentApplication ? recentApplication.status : 'No Active Application'}
                   </p>
                 </div>
                 <FileText className="w-10 h-10" style={{ color: 'var(--accent-text)' }} />
@@ -91,7 +91,7 @@ const UserDashboard = () => {
                     Loan Amount
                   </p>
                   <p className="heading-3 mt-1">
-                    {application ? `₦${Number(application.loanAmount).toLocaleString()}` : '₦0'}
+                    {recentApplication ? `₦${Number(recentApplication.loan_amount).toLocaleString()}` : '₦0'}
                   </p>
                 </div>
                 <CreditCard className="w-10 h-10" style={{ color: 'var(--accent-text)' }} />
@@ -107,7 +107,7 @@ const UserDashboard = () => {
                     Payment Status
                   </p>
                   <p className="heading-3 mt-1">
-                    {application ? application.paymentStatus : 'N/A'}
+                    {recentApplication ? recentApplication.payment_status : 'N/A'}
                   </p>
                 </div>
                 <Calendar className="w-10 h-10" style={{ color: 'var(--accent-text)' }} />
