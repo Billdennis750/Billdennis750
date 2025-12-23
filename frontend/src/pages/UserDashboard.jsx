@@ -1,22 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { LogOut, FileText, CreditCard, Calendar, Mail, Phone } from 'lucide-react';
-import { mockRepaymentSchedule, mockTransactions } from '../mock';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const UserDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  // Get application from localStorage
-  const application = JSON.parse(localStorage.getItem('currentApplication') || 'null');
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  const fetchApplications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/applications/`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setApplications(response.data.applications);
+    } catch (error) {
+      console.error('Failed to fetch applications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
+  // Get the most recent application
+  const recentApplication = applications.length > 0 ? applications[0] : null;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-section)' }}>
