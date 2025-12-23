@@ -9,26 +9,40 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 @router.get("/stats", response_model=dict)
 async def get_admin_stats(db=Depends(get_db)):
     try:
-        # Get statistics
-        total_applications = await db.applications.count_documents({})
-        pending_review = await db.applications.count_documents({"status": "under_review"})
-        approved = await db.applications.count_documents({"status": "approved"})
-        rejected = await db.applications.count_documents({"status": "rejected"})
-        
-        # Calculate total disbursed (sum of approved loan amounts)
+        # Use aggregation pipeline for efficient counting
         pipeline = [
-            {"$match": {"status": "approved"}},
-            {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}}}
+            {
+                "$facet": {
+                    "total": [{"$count": "count"}],
+                    "pending_review": [
+                        {"$match": {"status": "under_review"}},
+                        {"$count": "count"}
+                    ],
+                    "approved": [
+                        {"$match": {"status": "approved"}},
+                        {"$count": "count"}
+                    ],
+                    "rejected": [
+                        {"$match": {"status": "rejected"}},
+                        {"$count": "count"}
+                    ],
+                    "total_disbursed": [
+                        {"$match": {"status": "approved"}},
+                        {"$group": {"_id": None, "total": {"$sum": "$loan_amount"}}}
+                    ]
+                }
+            }
         ]
+        
         result = await db.applications.aggregate(pipeline).to_list(1)
-        total_disbursed = result[0]["total"] if result else 0
+        stats = result[0] if result else {}
         
         return {
-            "total_applications": total_applications,
-            "pending_review": pending_review,
-            "approved": approved,
-            "rejected": rejected,
-            "total_disbursed": total_disbursed
+            "total_applications": stats.get("total", [{}])[0].get("count", 0),
+            "pending_review": stats.get("pending_review", [{}])[0].get("count", 0),
+            "approved": stats.get("approved", [{}])[0].get("count", 0),
+            "rejected": stats.get("rejected", [{}])[0].get("count", 0),
+            "total_disbursed": stats.get("total_disbursed", [{}])[0].get("total", 0) if stats.get("total_disbursed") else 0
         }
     except Exception as e:
         logger.error(f"Get stats error: {str(e)}")
