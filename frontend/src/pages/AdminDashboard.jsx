@@ -142,24 +142,28 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="body-small" style={{ color: 'var(--text-muted)' }}>
-                      {stat.title}
-                    </p>
-                    <p className="heading-2 mt-1">{stat.value}</p>
+          {loading ? (
+            <div className="col-span-4 text-center py-8">Loading...</div>
+          ) : (
+            statsData.map((stat, index) => (
+              <Card key={index}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="body-small" style={{ color: 'var(--text-muted)' }}>
+                        {stat.title}
+                      </p>
+                      <p className="heading-2 mt-1">{stat.value}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center"
+                         style={{ background: 'var(--accent-wash)' }}>
+                      <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
+                    </div>
                   </div>
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                       style={{ background: 'var(--accent-wash)' }}>
-                    <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Applications Table */}
