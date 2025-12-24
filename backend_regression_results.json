@@ -1,6 +1,6 @@
 {
   "summary": {
-    "passed": 4,
+    "passed": 6,
     "total": 8
   },
   "results": [
@@ -9,56 +9,56 @@
       "success": true,
       "message": "Backend is healthy and responding",
       "details": null,
-      "timestamp": "2025-12-24T16:25:45.941710"
+      "timestamp": "2025-12-24T16:26:38.274530"
     },
     {
       "test": "User Registration",
       "success": true,
       "message": "User registration working correctly",
-      "details": "User ID: 694c140ac68e1cafd5465a38",
-      "timestamp": "2025-12-24T16:25:46.232129"
+      "details": "User ID: 694c143ec68e1cafd5465a39",
+      "timestamp": "2025-12-24T16:26:38.508855"
     },
     {
       "test": "Admin Login",
       "success": true,
       "message": "Admin login successful with correct credentials",
       "details": "Admin: Cashflows Mfb (kdride6@gmail.com)",
-      "timestamp": "2025-12-24T16:25:46.544956"
+      "timestamp": "2025-12-24T16:26:38.756085"
     },
     {
       "test": "Password Reset API",
       "success": true,
       "message": "Forgot password endpoint working correctly",
       "details": null,
-      "timestamp": "2025-12-24T16:25:46.560814"
+      "timestamp": "2025-12-24T16:26:38.765927"
     },
     {
       "test": "Loan Application Submission",
-      "success": false,
-      "message": "Application submission failed with status 422",
-      "details": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"repayment_duration\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"}]}",
-      "timestamp": "2025-12-24T16:25:46.581876"
+      "success": true,
+      "message": "Loan application submission working with new form fields",
+      "details": "Application ID: LOAN-2025-002",
+      "timestamp": "2025-12-24T16:26:39.466304"
     },
     {
       "test": "Admin Dashboard API",
-      "success": false,
-      "message": "Admin stats failed with status 520",
-      "details": "{\"detail\":\"Failed to get statistics\"}",
-      "timestamp": "2025-12-24T16:25:46.591486"
+      "success": true,
+      "message": "Admin dashboard API accessible and working",
+      "details": "Found 6 users",
+      "timestamp": "2025-12-24T16:26:39.477127"
     },
     {
       "test": "Payment Endpoints Basic",
       "success": false,
-      "message": "No test application available",
-      "details": null,
-      "timestamp": "2025-12-24T16:25:46.591510"
+      "message": "Unexpected status code: 521",
+      "details": "{\"detail\":\"Payment gateway error: Xixapay API returned 403: {\\\"status\\\":\\\"fail\\\",\\\"message\\\":\\\"The email field must be a valid email address.\\\"}\"}",
+      "timestamp": "2025-12-24T16:26:39.824152"
     },
     {
       "test": "Auth Middleware",
       "success": false,
       "message": "Expected 401, got 403",
       "details": "{\"detail\":\"Not authenticated\"}",
-      "timestamp": "2025-12-24T16:25:46.642006"
+      "timestamp": "2025-12-24T16:26:39.832311"
     }
   ],
   "test_type": "backend_regression"
