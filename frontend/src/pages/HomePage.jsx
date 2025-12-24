@@ -28,7 +28,7 @@ const HomePage = () => {
             No Collateral. No Stress.
           </h1>
           <p className="body-large mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Money shouldn't slow you down. We give you fast loans with zero
+            Money shouldn&apos;t slow you down. We give you fast loans with zero
             collateral. Straightforward. Quick. Reliable.
           </p>
           <div className="flex flex-col gap-6 items-center justify-center max-w-2xl mx-auto">
@@ -306,7 +306,7 @@ const HomePage = () => {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="heading-2 mb-4">Apply Now and Get the Funding You Need</h2>
           <p className="body-large mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Your goals deserve the right support. Whether you're growing your business,
+            Your goals deserve the right support. Whether you&apos;re growing your business,
             handling urgent needs, or securing new opportunities, Cashflow MFB is ready
             to back you with fast, reliable, no-collateral financing.
           </p>
@@ -329,9 +329,9 @@ const HomePage = () => {
       <section id="contact" className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Users className="w-16 h-16 mx-auto mb-6" style={{ color: 'var(--accent-text)' }} />
-          <h2 className="heading-2 mb-4">We're Here to Help</h2>
+          <h2 className="heading-2 mb-4">We&apos;re Here to Help</h2>
           <p className="body-large mb-8" style={{ color: 'var(--text-secondary)' }}>
-            We're here to support you every step of the way. Whether you have questions
+            We&apos;re here to support you every step of the way. Whether you have questions
             about our loan products, need assistance with your application, or want to
             speak with a representative, our team is always ready to help.
           </p>

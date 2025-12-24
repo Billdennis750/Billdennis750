@@ -50,7 +50,7 @@ const ForgotPasswordPage = () => {
                   </div>
                   <h1 className="heading-2 mb-2">Forgot Password?</h1>
                   <p className="body-medium" style={{ color: 'var(--text-secondary)' }}>
-                    Enter your email and we'll send you a link to reset your password.
+                    Enter your email and we&apos;ll send you a link to reset your password.
                   </p>
                 </div>
 
@@ -82,11 +82,11 @@ const ForgotPasswordPage = () => {
                 </div>
                 <h2 className="heading-2 mb-2">Check Your Email</h2>
                 <p className="body-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
-                  We've sent a password reset link to <strong>{email}</strong>. 
+                  We&apos;ve sent a password reset link to <strong>{email}</strong>. 
                   The link will expire in 1 hour.
                 </p>
                 <p className="body-small mb-6" style={{ color: 'var(--text-muted)' }}>
-                  Didn't receive the email? Check your spam folder or
+                  Didn&apos;t receive the email? Check your spam folder or
                 </p>
                 <Button
                   onClick={() => setIsSubmitted(false)}

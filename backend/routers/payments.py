@@ -59,11 +59,6 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         # Create unique order reference
         order_reference = f"CASHFLOW-{payment.application_id}-{int(datetime.now(timezone.utc).timestamp())}"
         
-        # Parse customer name into first and last name
-        name_parts = payment.customer_name.strip().split(' ', 1)
-        first_name = name_parts[0]
-        last_name = name_parts[1] if len(name_parts) > 1 else name_parts[0]
-        
         # Get phone number - use provided or extract from application
         phone_number = payment.customer_phone
         if not phone_number and application:
