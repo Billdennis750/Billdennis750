@@ -225,6 +225,36 @@ backend:
         agent: "main"
         comment: "Admin API working from previous session"
 
+  - task: "Payment Status Update & Loan Disbursement Workflow"
+    implemented: true
+    working: true
+    file: "/app/backend/routers/admin.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented Payment Status Update & Loan Disbursement Workflow with POST /api/admin/applications/{id}/disbursement endpoint, updated payment webhook handling for processing_fee_paid and deposit_paid flags, added disbursement_status field, and email notifications for disbursement decisions."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Disbursement workflow implementation verified. POST /api/admin/applications/{id}/disbursement endpoint working correctly with proper validation (requires 'decision' field, validates application status must be 'deposit_paid', rejects invalid application IDs with 404, rejects invalid decisions with 400). Payment webhook endpoint accessible and processing requests. Admin authentication working with provided credentials. All endpoint logic and validation confirmed functional."
+
+  - task: "Payment Webhook Enhanced Handling"
+    implemented: true
+    working: true
+    file: "/app/backend/routers/payments.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Enhanced payment webhook handling to properly set processing_fee_paid and deposit_paid flags based on payment amounts (₦2,500 for processing fee, ₦3,000 for deposit) with timestamps."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Payment webhook endpoint POST /api/payments/webhook accessible and processing requests correctly. Handles different payment amounts appropriately. Webhook validation and processing logic confirmed working."
+
 frontend:
   - task: "Homepage"
     implemented: true
