@@ -136,6 +136,36 @@ const AdminDashboard = () => {
     setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    
+    if (passwordData.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters long');
+      return;
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    
+    setChangingPassword(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/auth/change-password`, {
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword
+      }, { headers: { Authorization: `Bearer ${token}` }});
+      
+      toast.success('Password changed successfully');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const filteredApps = applications.filter(app => {
     const matchesSearch = 
       app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
