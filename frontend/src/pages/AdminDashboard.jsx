@@ -489,7 +489,7 @@ const AdminDashboard = () => {
                             {expandedRows[app.application_id] && (
                               <tr className="bg-gray-50">
                                 <td colSpan="6" className="p-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div>
                                       <h4 className="font-semibold text-sm mb-2">Personal Info</h4>
                                       <p className="text-sm"><span className="text-gray-500">Phone:</span> {app.phone}</p>
@@ -512,6 +512,27 @@ const AdminDashboard = () => {
                                         {app.deposit_paid ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Clock className="w-4 h-4 text-gray-400" />}
                                         Deposit: {app.deposit_paid ? 'Paid' : 'Not Paid'}
                                       </p>
+                                    </div>
+                                    <div>
+                                      <h4 className="font-semibold text-sm mb-2">Documents</h4>
+                                      <div className="flex flex-col gap-2">
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          className="justify-start"
+                                          onClick={() => handleViewDocument(app.id_card_url, 'ID Card', app.full_name)}
+                                        >
+                                          <FileImage className="w-4 h-4 mr-2" /> View ID Card
+                                        </Button>
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          className="justify-start"
+                                          onClick={() => handleViewDocument(app.passport_url, 'Passport', app.full_name)}
+                                        >
+                                          <Image className="w-4 h-4 mr-2" /> View Passport
+                                        </Button>
+                                      </div>
                                     </div>
                                   </div>
                                   <div className="mt-4 flex gap-2">
