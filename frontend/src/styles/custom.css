@@ -22,11 +22,38 @@
   --accent-wash: rgba(148, 242, 127, 0.1);
 }
 
+/* Dark Mode Variables */
+.dark {
+  --bg-page: #0f172a;
+  --bg-card: #1e293b;
+  --bg-section: rgba(255, 255, 255, 0.05);
+  
+  --text-primary: #f1f5f9;
+  --text-body: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --border-light: rgba(255, 255, 255, 0.1);
+  --border-medium: rgba(255, 255, 255, 0.2);
+  --border-strong: rgba(255, 255, 255, 0.3);
+  
+  --accent-primary: #4ade80;
+  --accent-strong: #22c55e;
+  --accent-text: #4ade80;
+  --accent-wash: rgba(74, 222, 128, 0.1);
+}
+
 /* Hero Gradients - Use ONLY for major sections */
 .hero-gradient {
   background: radial-gradient(at 53% 78%, hsla(60,100%,50%,0.3) 0px, transparent 50%), 
               radial-gradient(at 71% 91%, hsla(108,100%,50%,0.3) 0px, transparent 50%), 
               radial-gradient(at 31% 91%, hsla(30,100%,50%,0.17) 0px, transparent 50%);
+}
+
+.dark .hero-gradient {
+  background: radial-gradient(at 53% 78%, hsla(142,50%,30%,0.3) 0px, transparent 50%), 
+              radial-gradient(at 71% 91%, hsla(142,70%,25%,0.3) 0px, transparent 50%), 
+              radial-gradient(at 31% 91%, hsla(142,60%,20%,0.2) 0px, transparent 50%);
 }
 
 /* Button Gradients - For CTAs only */
