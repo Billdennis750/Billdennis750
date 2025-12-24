@@ -385,6 +385,10 @@ const AdminDashboard = () => {
               <Activity className="w-4 h-4 mr-2" />
               Activity
             </TabsTrigger>
+            <TabsTrigger value="reminders" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
+              <Send className="w-4 h-4 mr-2" />
+              Reminders
+            </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
               <Settings className="w-4 h-4 mr-2" />
               Settings
