@@ -28,6 +28,7 @@ class DisbursementWorkflowTester:
         self.client = httpx.AsyncClient(timeout=30.0)
         self.test_results = []
         self.test_application_id = None
+        self.admin_token = None
         
     async def log_result(self, test_name, success, message, details=None):
         """Log test result"""
