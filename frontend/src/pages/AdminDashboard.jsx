@@ -642,6 +642,7 @@ const AdminDashboard = () => {
                           <th className="text-left p-3 text-sm font-semibold text-gray-600">Phone</th>
                           <th className="text-left p-3 text-sm font-semibold text-gray-600">Role</th>
                           <th className="text-left p-3 text-sm font-semibold text-gray-600">Registered</th>
+                          <th className="text-left p-3 text-sm font-semibold text-gray-600">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -661,6 +662,22 @@ const AdminDashboard = () => {
                             </td>
                             <td className="p-3 text-sm text-gray-500">
                               {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                            </td>
+                            <td className="p-3">
+                              {user.role !== 'admin' ? (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                  onClick={() => handleViewUserDetails(user.email)}
+                                  disabled={loadingUserDetails}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Delete
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-gray-400">Protected</span>
+                              )}
                             </td>
                           </tr>
                         ))}
