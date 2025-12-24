@@ -60,14 +60,26 @@ async def submit_application(
     Submit a new loan application with account creation.
     Status will be: pending_payment (₦2,500 not paid yet)
     """
+    user_id = None
+    application_id = None
+    app_upload_dir = None
+    
     try:
         # Check if email already exists
         existing_user = await db.users.find_one({"email": email})
+        
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="An account with this email already exists. Please login instead."
-            )
+            # Check if user has an existing application
+            existing_app = await db.applications.find_one({"email": email})
+            if existing_app:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"You already have an application ({existing_app['application_id']}). Please login to check your status or contact support."
+                )
+            else:
+                # User exists but has no application - allow them to create one
+                user_id = str(existing_user["_id"])
+                logger.info(f"Existing user {email} creating new application")
         
         # Generate application ID
         app_count = await db.applications.count_documents({})
@@ -77,7 +89,7 @@ async def submit_application(
         app_upload_dir = os.path.join(settings.upload_dir, application_id)
         os.makedirs(app_upload_dir, exist_ok=True)
         
-        # Save files
+        # Save files first (before creating user)
         id_card_path = os.path.join(app_upload_dir, f"id_card_{id_card.filename}")
         passport_path = os.path.join(app_upload_dir, f"passport_{passport.filename}")
         
@@ -92,18 +104,19 @@ async def submit_application(
         # Calculate estimated repayment
         repayment_info = calculate_repayment(loan_amount, repayment_duration, repayment_frequency)
         
-        # Create user account
-        user_doc = {
-            "email": email,
-            "full_name": full_name,
-            "phone": phone,
-            "password_hash": get_password_hash(password),
-            "role": "user",
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc)
-        }
-        user_result = await db.users.insert_one(user_doc)
-        user_id = str(user_result.inserted_id)
+        # Create user account only if doesn't exist
+        if not user_id:
+            user_doc = {
+                "email": email,
+                "full_name": full_name,
+                "phone": phone,
+                "password_hash": get_password_hash(password),
+                "role": "user",
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+            user_result = await db.users.insert_one(user_doc)
+            user_id = str(user_result.inserted_id)
         
         # Create application document
         application_doc = {
