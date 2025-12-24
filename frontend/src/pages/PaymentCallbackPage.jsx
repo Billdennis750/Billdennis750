@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -18,9 +18,12 @@ const PaymentCallbackPage = () => {
   const bankName = searchParams.get('bank');
   const amount = searchParams.get('amount');
   
+  // Determine if this is a bank transfer from URL params
+  const isBankTransfer = paymentType === 'bank_transfer' && accountNumber;
+  
   // Calculate initial state based on URL params
   const initialState = useMemo(() => {
-    if (paymentType === 'bank_transfer' && accountNumber) {
+    if (isBankTransfer) {
       return {
         status: 'bank_transfer',
         paymentData: {
@@ -34,58 +37,65 @@ const PaymentCallbackPage = () => {
       };
     }
     return { status: 'loading', paymentData: null };
-  }, [paymentType, accountNumber, bankName, amount, searchParams]);
+  }, [isBankTransfer, accountNumber, bankName, amount, searchParams]);
 
   const [status, setStatus] = useState(initialState.status);
   const [paymentData, setPaymentData] = useState(initialState.paymentData);
   const [pollCount, setPollCount] = useState(0);
+  const hasVerified = useRef(false);
 
-  const verifyPayment = useCallback(async () => {
-    try {
-      const orderRef = searchParams.get('orderRef') || localStorage.getItem('order_reference');
-      const applicationId = localStorage.getItem('application_id');
-
-      if (!orderRef) {
-        setStatus('failed');
-        return;
-      }
-
-      const response = await axios.post(`${API}/payments/verify`, {
-        order_ref: orderRef
-      });
-
-      const { payment_status, transaction_reference, amount: paidAmount, virtual_account } = response.data;
-
-      setPaymentData({
-        orderRef: orderRef,
-        amount: paidAmount,
-        transactionRef: transaction_reference,
-        applicationId: applicationId,
-        virtualAccount: virtual_account
-      });
-
-      if (payment_status === 'completed') {
-        setStatus('success');
-        localStorage.removeItem('order_reference');
-        localStorage.removeItem('application_id');
-      } else if (payment_status === 'failed') {
-        setStatus('failed');
-      } else {
-        // Payment still pending - show bank transfer instructions
-        setStatus('pending');
-      }
-    } catch (error) {
-      console.error('Payment verification error:', error);
-      setStatus('failed');
-    }
-  }, [searchParams]);
-
+  // Verify payment on mount (only for non-bank transfer)
   useEffect(() => {
-    // Only verify payment if not a bank transfer (bank transfer state is set via useMemo)
-    if (!(paymentType === 'bank_transfer' && accountNumber)) {
-      verifyPayment();
-    }
-  }, [paymentType, accountNumber, verifyPayment]);
+    if (isBankTransfer || hasVerified.current) return;
+    hasVerified.current = true;
+    
+    const controller = new AbortController();
+    
+    const verifyPayment = async () => {
+      try {
+        const orderRef = searchParams.get('orderRef') || localStorage.getItem('order_reference');
+        const applicationId = localStorage.getItem('application_id');
+
+        if (!orderRef) {
+          setStatus('failed');
+          return;
+        }
+
+        const response = await axios.post(`${API}/payments/verify`, {
+          order_ref: orderRef
+        }, { signal: controller.signal });
+
+        const { payment_status, transaction_reference, amount: paidAmount, virtual_account } = response.data;
+
+        setPaymentData({
+          orderRef: orderRef,
+          amount: paidAmount,
+          transactionRef: transaction_reference,
+          applicationId: applicationId,
+          virtualAccount: virtual_account
+        });
+
+        if (payment_status === 'completed') {
+          setStatus('success');
+          localStorage.removeItem('order_reference');
+          localStorage.removeItem('application_id');
+        } else if (payment_status === 'failed') {
+          setStatus('failed');
+        } else {
+          setStatus('pending');
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('Payment verification error:', error);
+          setStatus('failed');
+        }
+      }
+    };
+    
+    verifyPayment();
+    
+    return () => controller.abort();
+  }, [isBankTransfer, searchParams]);
 
   // Poll for payment status when showing bank transfer instructions
   useEffect(() => {
@@ -117,6 +127,46 @@ const PaymentCallbackPage = () => {
       return () => clearInterval(interval);
     }
   }, [status, pollCount, searchParams]);
+
+  const verifyPaymentManual = async () => {
+    setStatus('verifying');
+    try {
+      const orderRef = searchParams.get('orderRef') || localStorage.getItem('order_reference');
+      const applicationId = localStorage.getItem('application_id');
+
+      if (!orderRef) {
+        setStatus('failed');
+        return;
+      }
+
+      const response = await axios.post(`${API}/payments/verify`, {
+        order_ref: orderRef
+      });
+
+      const { payment_status, transaction_reference, amount: paidAmount, virtual_account } = response.data;
+
+      setPaymentData({
+        orderRef: orderRef,
+        amount: paidAmount,
+        transactionRef: transaction_reference,
+        applicationId: applicationId,
+        virtualAccount: virtual_account
+      });
+
+      if (payment_status === 'completed') {
+        setStatus('success');
+        localStorage.removeItem('order_reference');
+        localStorage.removeItem('application_id');
+      } else if (payment_status === 'failed') {
+        setStatus('failed');
+      } else {
+        setStatus('pending');
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      setStatus('failed');
+    }
+  };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
