@@ -146,11 +146,11 @@ backend:
 
   - task: "Loan Application Submission API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/routers/applications.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
@@ -158,6 +158,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Updated to include new form fields: secondary_phone, relative_phone, flat_house_number. Backend accepts new Form fields."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Loan application submission API working correctly with all new form fields. Successfully accepts: secondary_phone (optional), relative_phone (required), flat_house_number (required), bank details (bank_name, account_name, account_number), repayment preferences (repayment_duration, repayment_frequency), and all other existing fields. Application created successfully with proper validation."
 
   - task: "Xixapay Payment Initiation API"
     implemented: true
