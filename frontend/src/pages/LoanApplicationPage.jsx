@@ -25,7 +25,10 @@ const LoanApplicationPage = () => {
     dateOfBirth: '',
     email: '',
     phone: '',
+    secondaryPhone: '',
+    relativePhone: '',
     homeTown: '',
+    flatHouseNumber: '',
     residentialAddress: '',
     
     // Employment
