@@ -156,6 +156,40 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleDisbursementDecision = async (appId, decision) => {
+    const confirmMessage = decision === 'approve' 
+      ? 'Are you sure you want to approve this loan disbursement? The user will be notified and funds should be credited to their account.'
+      : 'Are you sure you want to decline this loan disbursement? Please provide a reason.';
+    
+    let reason = '';
+    if (decision === 'decline') {
+      reason = prompt('Please provide a reason for declining the disbursement:');
+      if (reason === null) return; // User cancelled
+      if (!reason.trim()) {
+        toast.error('A reason is required to decline disbursement');
+        return;
+      }
+    }
+    
+    if (decision === 'approve' && !window.confirm(confirmMessage)) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API}/admin/applications/${appId}/disbursement`,
+        { decision, reason },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      
+      toast.success(response.data.message);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to process disbursement decision');
+    }
+  };
+
   const toggleRow = (id) => {
     setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
   };
