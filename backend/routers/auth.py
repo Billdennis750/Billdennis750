@@ -1,12 +1,26 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from models.user import UserCreate, UserLogin, Token, User
 from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user
+from utils.email import email_service
 from database import get_db
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+from pydantic import BaseModel, EmailStr
 import logging
+import secrets
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 @router.post("/register", response_model=dict)
 async def register(user: UserCreate, db=Depends(get_db)):
