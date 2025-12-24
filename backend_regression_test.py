@@ -236,7 +236,7 @@ class BackendRegressionTester:
                 'account_name': (None, f'John Doe {timestamp}'),
                 'account_number': (None, '1234567890'),
                 'loan_amount': (None, '500000'),
-                'loan_duration': (None, '12'),
+                'repayment_duration': (None, '12'),
                 'repayment_frequency': (None, 'monthly'),
                 'loan_reason': (None, 'Business expansion'),
                 'nin': (None, '12345678901'),
