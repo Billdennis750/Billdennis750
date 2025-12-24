@@ -226,7 +226,7 @@ frontend:
     file: "/app/frontend/src/pages/HomePage.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
@@ -237,6 +237,9 @@ frontend:
       - working: true
         agent: "main"
         comment: "Updated loan amount to '₦1M – ₦100M' as per user request. Screenshot verified - hero section and Loan Overview section both updated."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Homepage updates verified. Hero section shows correct loan amount '₦1M – ₦100M', Loan Overview section shows correct amount, 'View FAQ' button present and navigates to /faq page correctly. All homepage features working as expected."
 
   - task: "FAQ Page"
     implemented: true
