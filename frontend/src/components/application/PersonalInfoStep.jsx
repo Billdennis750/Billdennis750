@@ -10,16 +10,28 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '../ui/form';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
+
+// Phone validation: exactly 11 digits, numbers only
+const phoneRegex = /^[0-9]{11}$/;
 
 const schema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 characters'),
+  phone: z.string()
+    .regex(phoneRegex, 'Phone number must be exactly 11 digits (numbers only)'),
+  secondaryPhone: z.string()
+    .regex(phoneRegex, 'Secondary phone must be exactly 11 digits (numbers only)')
+    .optional()
+    .or(z.literal('')),
+  relativePhone: z.string()
+    .regex(phoneRegex, "Relative's phone must be exactly 11 digits (numbers only)"),
   homeTown: z.string().min(2, 'Home town is required'),
+  flatHouseNumber: z.string().min(1, 'Flat/House number is required'),
   residentialAddress: z.string().min(10, 'Residential address is required'),
 });
 
@@ -31,10 +43,19 @@ const PersonalInfoStep = ({ initialData, onNext }) => {
       dateOfBirth: initialData.dateOfBirth || '',
       email: initialData.email || '',
       phone: initialData.phone || '',
+      secondaryPhone: initialData.secondaryPhone || '',
+      relativePhone: initialData.relativePhone || '',
       homeTown: initialData.homeTown || '',
+      flatHouseNumber: initialData.flatHouseNumber || '',
       residentialAddress: initialData.residentialAddress || '',
     },
   });
+
+  // Handle phone input to only allow numbers
+  const handlePhoneInput = (e, field) => {
+    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+    field.onChange(value);
+  };
 
   const onSubmit = (data) => {
     onNext(data);
@@ -92,8 +113,54 @@ const PersonalInfoStep = ({ initialData, onNext }) => {
             <FormItem>
               <FormLabel>Phone Number *</FormLabel>
               <FormControl>
-                <Input placeholder="+234 801 234 5678" {...field} />
+                <Input 
+                  placeholder="08012345678" 
+                  maxLength={11}
+                  value={field.value}
+                  onChange={(e) => handlePhoneInput(e, field)}
+                />
               </FormControl>
+              <FormDescription>Enter 11 digits, numbers only</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="secondaryPhone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Secondary Phone Number</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="08098765432" 
+                  maxLength={11}
+                  value={field.value}
+                  onChange={(e) => handlePhoneInput(e, field)}
+                />
+              </FormControl>
+              <FormDescription>Optional - Enter 11 digits, numbers only</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="relativePhone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Relative's Phone Number *</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="08011223344" 
+                  maxLength={11}
+                  value={field.value}
+                  onChange={(e) => handlePhoneInput(e, field)}
+                />
+              </FormControl>
+              <FormDescription>Enter 11 digits, numbers only (for emergency contact)</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -107,6 +174,20 @@ const PersonalInfoStep = ({ initialData, onNext }) => {
               <FormLabel>Home Town *</FormLabel>
               <FormControl>
                 <Input placeholder="Lagos" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="flatHouseNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Flat / House Number *</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., 12A, Flat 5, Block B" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
