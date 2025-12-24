@@ -1,6 +1,6 @@
 {
   "summary": {
-    "passed": 3,
+    "passed": 5,
     "total": 7
   },
   "results": [
@@ -9,63 +9,84 @@
       "success": true,
       "message": "Backend is running",
       "details": null,
-      "timestamp": "2025-12-24T17:42:29.861333"
+      "timestamp": "2025-12-24T17:43:21.684327"
     },
     {
       "test": "Admin Login",
       "success": true,
       "message": "Admin logged in successfully",
       "details": null,
-      "timestamp": "2025-12-24T17:42:30.140097"
+      "timestamp": "2025-12-24T17:43:21.919895"
     },
     {
       "test": "Admin Users Endpoint",
       "success": true,
       "message": "Retrieved 9 users",
       "details": null,
-      "timestamp": "2025-12-24T17:42:30.152286"
+      "timestamp": "2025-12-24T17:43:21.929026"
     },
     {
       "test": "Applications List Endpoint",
       "success": true,
       "message": "Retrieved 4 applications",
       "details": null,
-      "timestamp": "2025-12-24T17:42:30.165187"
+      "timestamp": "2025-12-24T17:43:21.942437"
+    },
+    {
+      "test": "Simulate Processing Fee Payment",
+      "success": false,
+      "message": "Payment initiation failed: 521",
+      "details": null,
+      "timestamp": "2025-12-24T17:43:22.803257"
+    },
+    {
+      "test": "Simulate Application Approval",
+      "success": true,
+      "message": "Application approved",
+      "details": null,
+      "timestamp": "2025-12-24T17:43:23.054908"
+    },
+    {
+      "test": "Simulate Deposit Payment",
+      "success": false,
+      "message": "Payment initiation failed: 521",
+      "details": null,
+      "timestamp": "2025-12-24T17:43:23.478320"
     },
     {
       "test": "Create Test Application (Deposit Paid)",
-      "success": false,
-      "message": "Failed to create application: 400",
-      "details": "{\"detail\":\"You already have an application (LOAN-2025-004). Please login to check your status or contact support.\"}",
-      "timestamp": "2025-12-24T17:42:30.181801"
+      "success": true,
+      "message": "Application created and set to deposit_paid: LOAN-2025-005",
+      "details": null,
+      "timestamp": "2025-12-24T17:43:23.478377"
     },
     {
-      "test": "Disbursement Decision Endpoint",
+      "test": "Disbursement Approve",
       "success": false,
-      "message": "Missing application ID or admin token",
-      "details": null,
-      "timestamp": "2025-12-24T17:42:30.181827"
+      "message": "Failed: 400",
+      "details": "{\"detail\":\"Application must be in 'deposit_paid' status. Current status: approved\"}",
+      "timestamp": "2025-12-24T17:43:23.488581"
     },
     {
       "test": "Processing Fee Webhook",
       "success": false,
       "message": "Unexpected webhook response",
       "details": "{'status': 'ok', 'message': 'Transaction not found'}",
-      "timestamp": "2025-12-24T17:42:30.234156"
+      "timestamp": "2025-12-24T17:43:23.539631"
     },
     {
       "test": "Invalid Application ID",
       "success": true,
       "message": "Correctly rejected invalid application ID",
       "details": null,
-      "timestamp": "2025-12-24T17:42:30.249487"
+      "timestamp": "2025-12-24T17:43:23.589233"
     },
     {
       "test": "Invalid Decision",
-      "success": false,
-      "message": "No test application ID available",
+      "success": true,
+      "message": "Correctly rejected invalid decision",
       "details": null,
-      "timestamp": "2025-12-24T17:42:30.249508"
+      "timestamp": "2025-12-24T17:43:23.599178"
     }
   ]
 }
