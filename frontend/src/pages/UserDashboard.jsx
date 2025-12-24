@@ -410,13 +410,13 @@ const UserDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <a href="mailto:support@cashflowmfb.ng" className={`flex items-center gap-3 p-4 rounded-xl ${isDarkMode ? 'bg-slate-700/50 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100'} transition-colors`}>
+                  <a href="mailto:payment@cashflowsmfb.com" className={`flex items-center gap-3 p-4 rounded-xl ${isDarkMode ? 'bg-slate-700/50 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100'} transition-colors`}>
                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
                       <Mail className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
                       <p className={`font-semibold ${textPrimary}`}>Email Support</p>
-                      <p className={`text-sm ${textMuted}`}>support@cashflowmfb.ng</p>
+                      <p className={`text-sm ${textMuted}`}>payment@cashflowsmfb.com</p>
                     </div>
                   </a>
                   <a href="tel:+2348000000000" className={`flex items-center gap-3 p-4 rounded-xl ${isDarkMode ? 'bg-slate-700/50 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100'} transition-colors`}>
