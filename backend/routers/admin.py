@@ -70,13 +70,23 @@ async def list_all_users_setup(request: dict, db=Depends(get_db)):
         raise HTTPException(status_code=403, detail="Invalid secret key")
     
     users = await db.users.find({}, {"_id": 0, "email": 1, "full_name": 1, "role": 1, "created_at": 1}).to_list(100)
-    applications = await db.applications.find({}, {"_id": 0, "email": 1, "full_name": 1, "application_id": 1, "status": 1}).to_list(100)
+    applications = await db.applications.find({}, {"_id": 0, "email": 1, "full_name": 1, "application_id": 1, "status": 1, "processing_fee_paid": 1, "deposit_paid": 1}).to_list(100)
+    transactions = await db.transactions.find({}, {"_id": 0}).to_list(100)
+    
+    # Convert datetime objects
+    for t in transactions:
+        if t.get("created_at"):
+            t["created_at"] = str(t["created_at"])
+        if t.get("updated_at"):
+            t["updated_at"] = str(t["updated_at"])
     
     return {
         "users": users,
         "applications": applications,
+        "transactions": transactions,
         "total_users": len(users),
-        "total_applications": len(applications)
+        "total_applications": len(applications),
+        "total_transactions": len(transactions)
     }
 
 @router.post("/delete-user-data", response_model=dict)
