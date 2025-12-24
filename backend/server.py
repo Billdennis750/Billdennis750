@@ -36,6 +36,8 @@ async def send_payment_reminders():
             client = AsyncIOMotorClient(settings.mongo_url)
             db = client[settings.db_name]
             
+            now = datetime.now(timezone.utc)
+            
             # Get applications with pending payment (processing fee)
             pending_processing = await db.applications.find({
                 "status": "pending_payment",
@@ -45,15 +47,19 @@ async def send_payment_reminders():
             for app in pending_processing:
                 # Check if created more than 24 hours ago
                 created = app.get("created_at")
-                if created and (datetime.now(timezone.utc) - created) > timedelta(hours=24):
-                    await email_service.send_payment_reminder(
-                        app["email"],
-                        app["full_name"],
-                        app["application_id"],
-                        "processing_fee",
-                        2500
-                    )
-                    logger.info(f"Sent processing fee reminder to {app['email']}")
+                if created:
+                    # Make created timezone aware if it's naive
+                    if created.tzinfo is None:
+                        created = created.replace(tzinfo=timezone.utc)
+                    if (now - created) > timedelta(hours=24):
+                        await email_service.send_payment_reminder(
+                            app["email"],
+                            app["full_name"],
+                            app["application_id"],
+                            "processing_fee",
+                            2500
+                        )
+                        logger.info(f"Sent processing fee reminder to {app['email']}")
             
             # Get applications with pending deposit
             pending_deposit = await db.applications.find({
@@ -63,17 +69,22 @@ async def send_payment_reminders():
             
             for app in pending_deposit:
                 approved_at = app.get("approved_at")
-                if approved_at and (datetime.now(timezone.utc) - approved_at) > timedelta(hours=24):
-                    await email_service.send_payment_reminder(
-                        app["email"],
-                        app["full_name"],
-                        app["application_id"],
-                        "deposit",
-                        3000
-                    )
-                    logger.info(f"Sent deposit reminder to {app['email']}")
+                if approved_at:
+                    # Make approved_at timezone aware if it's naive
+                    if approved_at.tzinfo is None:
+                        approved_at = approved_at.replace(tzinfo=timezone.utc)
+                    if (now - approved_at) > timedelta(hours=24):
+                        await email_service.send_payment_reminder(
+                            app["email"],
+                            app["full_name"],
+                            app["application_id"],
+                            "deposit",
+                            3000
+                        )
+                        logger.info(f"Sent deposit reminder to {app['email']}")
             
             client.close()
+            logger.info("Payment reminder task completed successfully")
             
         except Exception as e:
             logger.error(f"Payment reminder task error: {str(e)}")
