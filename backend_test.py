@@ -322,7 +322,7 @@ class DisbursementWorkflowTester:
             # First initiate payment to create transaction record
             payment_payload = {
                 "application_id": self.test_application_id,
-                "customer_email": "jane.smith.test@example.com",
+                "customer_email": self.test_email or "jane.smith.test@example.com",
                 "customer_name": "Jane Smith",
                 "customer_phone": "08087654321",
                 "amount": 3000,
