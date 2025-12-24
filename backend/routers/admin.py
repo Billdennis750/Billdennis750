@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from database import get_db
-from utils.auth import get_current_user
+from utils.auth import get_current_user, get_password_hash
 from utils.email import email_service
 from pydantic import BaseModel
 from typing import List, Optional
@@ -16,6 +16,92 @@ class SendReminderRequest(BaseModel):
     user_emails: List[str]  # List of email addresses to send reminders to
     reminder_type: str = "all"  # "processing_fee", "deposit", or "all"
     custom_message: Optional[str] = None
+
+class SetupAdminRequest(BaseModel):
+    secret_key: str
+    email: str
+    password: str
+    full_name: str
+
+class DeleteUserRequest(BaseModel):
+    secret_key: str
+    email: str
+
+# Setup endpoint (use a secret key for security)
+SETUP_SECRET = "cashflow_setup_2025_secret"
+
+@router.post("/setup-admin", response_model=dict)
+async def setup_admin(request: SetupAdminRequest, db=Depends(get_db)):
+    """Create admin user (protected by secret key)"""
+    if request.secret_key != SETUP_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid secret key")
+    
+    # Check if admin already exists
+    existing = await db.users.find_one({"email": request.email})
+    if existing:
+        # Update password
+        await db.users.update_one(
+            {"email": request.email},
+            {"$set": {
+                "password_hash": get_password_hash(request.password),
+                "role": "admin",
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        return {"message": "Admin password updated", "email": request.email}
+    
+    # Create new admin
+    admin_data = {
+        "email": request.email,
+        "password_hash": get_password_hash(request.password),
+        "full_name": request.full_name,
+        "phone": "08000000000",
+        "role": "admin",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    }
+    await db.users.insert_one(admin_data)
+    return {"message": "Admin created successfully", "email": request.email}
+
+@router.post("/list-all-users", response_model=dict)
+async def list_all_users_setup(request: dict, db=Depends(get_db)):
+    """List all users (protected by secret key)"""
+    if request.get("secret_key") != SETUP_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid secret key")
+    
+    users = await db.users.find({}, {"_id": 0, "email": 1, "full_name": 1, "role": 1, "created_at": 1}).to_list(100)
+    applications = await db.applications.find({}, {"_id": 0, "email": 1, "full_name": 1, "application_id": 1, "status": 1}).to_list(100)
+    
+    return {
+        "users": users,
+        "applications": applications,
+        "total_users": len(users),
+        "total_applications": len(applications)
+    }
+
+@router.post("/delete-user-data", response_model=dict)
+async def delete_user_data(request: DeleteUserRequest, db=Depends(get_db)):
+    """Delete user and all related data (protected by secret key)"""
+    if request.secret_key != SETUP_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid secret key")
+    
+    email = request.email
+    
+    # Delete from all collections
+    user_result = await db.users.delete_many({"email": email})
+    app_result = await db.applications.delete_many({"email": email})
+    reset_result = await db.password_resets.delete_many({"email": email})
+    txn_result = await db.transactions.delete_many({"email": email})
+    
+    return {
+        "message": f"Deleted all data for {email}",
+        "deleted": {
+            "users": user_result.deleted_count,
+            "applications": app_result.deleted_count,
+            "password_resets": reset_result.deleted_count,
+            "transactions": txn_result.deleted_count
+        }
+    }
 
 @router.get("/stats", response_model=dict)
 async def get_admin_stats(db=Depends(get_db)):
