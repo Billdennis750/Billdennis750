@@ -88,7 +88,10 @@ const LoanApplicationPage = () => {
       formDataObj.append('date_of_birth', finalData.dateOfBirth);
       formDataObj.append('email', finalData.email);
       formDataObj.append('phone', finalData.phone);
+      formDataObj.append('secondary_phone', finalData.secondaryPhone || '');
+      formDataObj.append('relative_phone', finalData.relativePhone);
       formDataObj.append('home_town', finalData.homeTown);
+      formDataObj.append('flat_house_number', finalData.flatHouseNumber);
       formDataObj.append('residential_address', finalData.residentialAddress);
       
       // Employment & Income
