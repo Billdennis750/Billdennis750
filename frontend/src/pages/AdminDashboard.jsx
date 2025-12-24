@@ -707,6 +707,168 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
+          {/* Reminders Tab */}
+          <TabsContent value="reminders">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Send to Selected Users */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Send className="w-5 h-5" />
+                    Send Reminders to Selected Users
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Reminder Type</label>
+                      <Select value={reminderType} onValueChange={setReminderType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select reminder type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Pending Payments</SelectItem>
+                          <SelectItem value="processing_fee">Processing Fee Only (₦2,500)</SelectItem>
+                          <SelectItem value="deposit">Deposit Only (₦3,000)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-medium">Select Users</label>
+                        <Button variant="link" size="sm" onClick={handleSelectAllForReminder}>
+                          {selectedUsersForReminder.length === applications.filter(a => !a.processing_fee_paid || (a.status === 'approved' && !a.deposit_paid)).length ? 'Deselect All' : 'Select All Pending'}
+                        </Button>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto border rounded-lg">
+                        {applications.filter(app => !app.processing_fee_paid || (app.status === 'approved' && !app.deposit_paid)).length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">
+                            No users with pending payments
+                          </div>
+                        ) : (
+                          applications
+                            .filter(app => !app.processing_fee_paid || (app.status === 'approved' && !app.deposit_paid))
+                            .map((app) => (
+                              <div 
+                                key={app.application_id} 
+                                className={`flex items-center gap-3 p-3 border-b hover:bg-gray-50 cursor-pointer ${selectedUsersForReminder.includes(app.email) ? 'bg-green-50' : ''}`}
+                                onClick={() => handleSelectUserForReminder(app.email)}
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  checked={selectedUsersForReminder.includes(app.email)}
+                                  onChange={() => {}}
+                                  className="w-4 h-4 text-green-600"
+                                />
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{app.full_name}</p>
+                                  <p className="text-xs text-gray-500">{app.email}</p>
+                                </div>
+                                <div className="text-right">
+                                  {!app.processing_fee_paid && (
+                                    <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">₦2,500 pending</span>
+                                  )}
+                                  {app.processing_fee_paid && !app.deposit_paid && app.status === 'approved' && (
+                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">₦3,000 deposit</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-500">
+                        {selectedUsersForReminder.length} user(s) selected
+                      </p>
+                      <Button 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={handleSendReminders}
+                        disabled={sendingReminders || selectedUsersForReminder.length === 0}
+                      >
+                        {sendingReminders ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            Send Reminders
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MailIcon className="w-5 h-5" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <h4 className="font-semibold text-yellow-800 mb-2">Send to All Pending Users</h4>
+                      <p className="text-sm text-yellow-700 mb-4">
+                        This will send payment reminder emails to ALL users with pending payments (both processing fee and deposit).
+                      </p>
+                      <Button 
+                        className="w-full bg-yellow-600 hover:bg-yellow-700"
+                        onClick={handleSendReminderToAll}
+                        disabled={sendingReminders}
+                      >
+                        {sendingReminders ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            Send to All Pending Users
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-800 mb-2">Reminder Statistics</h4>
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        <div className="text-center p-3 bg-white rounded-lg border">
+                          <p className="text-2xl font-bold text-yellow-600">
+                            {applications.filter(a => !a.processing_fee_paid).length}
+                          </p>
+                          <p className="text-xs text-gray-500">Pending Processing Fee</p>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg border">
+                          <p className="text-2xl font-bold text-purple-600">
+                            {applications.filter(a => a.processing_fee_paid && !a.deposit_paid && a.status === 'approved').length}
+                          </p>
+                          <p className="text-xs text-gray-500">Pending Deposit</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <h4 className="font-semibold text-green-800 mb-2">Auto Reminders</h4>
+                      <p className="text-sm text-green-700">
+                        Automatic reminders are sent every 24 hours to users with pending payments older than 24 hours.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           {/* Settings Tab */}
           <TabsContent value="settings">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
