@@ -208,7 +208,7 @@ async def submit_application(
             try:
                 import shutil
                 shutil.rmtree(app_upload_dir)
-            except:
+            except Exception:
                 pass
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
