@@ -205,6 +205,22 @@ async def get_user_details(email: str, token_data=Depends(get_current_user), db=
             detail="Failed to get user details"
         )
 
+@router.post("/check-config", response_model=dict)
+async def check_config(request: dict):
+    """Check server configuration (protected by secret key)"""
+    if request.get("secret_key") != SETUP_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid secret key")
+    
+    from config import get_settings
+    settings = get_settings()
+    
+    return {
+        "backend_url": settings.backend_url,
+        "webhook_url": f"{settings.backend_url}/api/payments/webhook",
+        "xixapay_base_url": settings.xixapay_base_url,
+        "sendgrid_from_email": settings.sendgrid_from_email
+    }
+
 @router.get("/stats", response_model=dict)
 async def get_admin_stats(db=Depends(get_db)):
     try:
