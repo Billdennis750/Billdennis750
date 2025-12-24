@@ -160,11 +160,15 @@ class DisbursementWorkflowTester:
     async def create_test_application_with_deposit_paid_status(self):
         """Create a test application and set it to deposit_paid status for disbursement testing"""
         try:
+            # Use timestamp to ensure unique email
+            timestamp = int(datetime.now().timestamp())
+            test_email = f"jane.smith.test.{timestamp}@example.com"
+            
             # Create multipart form data for application submission
             files = {
                 'full_name': (None, 'Jane Smith'),
                 'date_of_birth': (None, '1985-05-20'),
-                'email': (None, 'jane.smith.test@example.com'),
+                'email': (None, test_email),
                 'phone': (None, '08087654321'),
                 'secondary_phone': (None, '08012345678'),
                 'relative_phone': (None, '08098765432'),
@@ -194,6 +198,7 @@ class DisbursementWorkflowTester:
             if response.status_code == 200:
                 data = response.json()
                 self.test_application_id = data.get('application_id')
+                self.test_email = test_email
                 
                 # Now simulate the payment workflow to get to deposit_paid status
                 # 1. Mark processing fee as paid
