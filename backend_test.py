@@ -29,6 +29,7 @@ class DisbursementWorkflowTester:
         self.test_results = []
         self.test_application_id = None
         self.admin_token = None
+        self.test_email = None
         
     async def log_result(self, test_name, success, message, details=None):
         """Log test result"""
