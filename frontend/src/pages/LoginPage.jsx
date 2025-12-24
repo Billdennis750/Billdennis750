@@ -26,7 +26,7 @@ const schema = z.object({
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
 
   const form = useForm({
     resolver: zodResolver(schema),
