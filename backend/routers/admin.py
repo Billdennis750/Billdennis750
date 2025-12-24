@@ -1,11 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from database import get_db
 from utils.auth import get_current_user
+from utils.email import email_service
+from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime, timezone
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+class SendReminderRequest(BaseModel):
+    user_emails: List[str]  # List of email addresses to send reminders to
+    reminder_type: str = "all"  # "processing_fee", "deposit", or "all"
+    custom_message: Optional[str] = None
 
 @router.get("/stats", response_model=dict)
 async def get_admin_stats(db=Depends(get_db)):
