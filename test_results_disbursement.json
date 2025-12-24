@@ -1,0 +1,92 @@
+{
+  "summary": {
+    "passed": 5,
+    "total": 7
+  },
+  "results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "message": "Backend is running",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:32.411367"
+    },
+    {
+      "test": "Admin Login",
+      "success": true,
+      "message": "Admin logged in successfully",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:32.707533"
+    },
+    {
+      "test": "Admin Users Endpoint",
+      "success": true,
+      "message": "Retrieved 8 users",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:32.719812"
+    },
+    {
+      "test": "Applications List Endpoint",
+      "success": true,
+      "message": "Retrieved 3 applications",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:32.728954"
+    },
+    {
+      "test": "Simulate Processing Fee Payment",
+      "success": true,
+      "message": "Processing fee payment simulated",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:33.476778"
+    },
+    {
+      "test": "Simulate Application Approval",
+      "success": true,
+      "message": "Application approved",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:33.685150"
+    },
+    {
+      "test": "Simulate Deposit Payment",
+      "success": true,
+      "message": "Deposit payment simulated",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:33.733736"
+    },
+    {
+      "test": "Create Test Application (Deposit Paid)",
+      "success": true,
+      "message": "Application created and set to deposit_paid: LOAN-2025-004",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:33.733761"
+    },
+    {
+      "test": "Disbursement Approve",
+      "success": false,
+      "message": "Failed: 400",
+      "details": "{\"detail\":\"Application must be in 'deposit_paid' status. Current status: approved\"}",
+      "timestamp": "2025-12-24T17:41:33.742790"
+    },
+    {
+      "test": "Processing Fee Webhook",
+      "success": false,
+      "message": "Unexpected webhook response",
+      "details": "{'status': 'ok', 'message': 'Transaction not found'}",
+      "timestamp": "2025-12-24T17:41:33.790730"
+    },
+    {
+      "test": "Invalid Application ID",
+      "success": true,
+      "message": "Correctly rejected invalid application ID",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:33.798802"
+    },
+    {
+      "test": "Invalid Decision",
+      "success": true,
+      "message": "Correctly rejected invalid decision",
+      "details": null,
+      "timestamp": "2025-12-24T17:41:33.806203"
+    }
+  ]
+}
