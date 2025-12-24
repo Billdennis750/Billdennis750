@@ -1037,6 +1037,44 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Document Preview Modal */}
+      {showDocumentModal && documentPreview && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowDocumentModal(false)}>
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold">{documentPreview.type}</h3>
+                <p className="text-sm text-gray-500">{documentPreview.applicantName}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleDownloadDocument(documentPreview.url.replace(BACKEND_URL, ''), documentPreview.type, documentPreview.applicantName)}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowDocumentModal(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-4 flex items-center justify-center bg-gray-100" style={{ minHeight: '60vh' }}>
+              <img 
+                src={documentPreview.url} 
+                alt={documentPreview.type}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" x="50" text-anchor="middle" font-size="12">Image not found</text></svg>';
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
