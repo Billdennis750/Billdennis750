@@ -76,7 +76,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2">
                 <Mail className="w-4 h-4" style={{ color: 'var(--accent-text)' }} />
-                <span className="body-small">support@cashflowmfb.ng</span>
+                <span className="body-small">payment@cashflowsmfb.com</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Phone className="w-4 h-4" style={{ color: 'var(--accent-text)' }} />

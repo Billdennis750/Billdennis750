@@ -23,7 +23,7 @@ const HomePage = () => {
       <section className="hero-gradient min-h-screen flex items-center justify-center pt-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="heading-1 mb-6">
-            Get ₦1.5M – ₦15M.
+            Get ₦1M – ₦100M.
             <br />
             No Collateral. No Stress.
           </h1>
@@ -104,7 +104,7 @@ const HomePage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="product-card">
-              <h3 className="heading-3 mb-2">₦50k – ₦15M</h3>
+              <h3 className="heading-3 mb-2">₦1M – ₦100M</h3>
               <p className="body-small">Loan Amount Range</p>
             </div>
             <div className="product-card">
@@ -329,7 +329,7 @@ const HomePage = () => {
             speak with a representative, our team is always ready to help.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="mailto:support@cashflowmfb.ng">
+            <a href="mailto:payment@cashflowsmfb.com">
               <button className="btn-primary">Contact Support</button>
             </a>
             <a href="tel:+2348000000000">
