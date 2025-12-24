@@ -204,7 +204,7 @@ const PaymentCallbackPage = () => {
                   className="w-full btn-primary" 
                   onClick={handleVerifyClick}
                 >
-                  I've Made the Transfer
+                  I&apos;ve Made the Transfer
                 </Button>
                 <Link to="/" className="block">
                   <Button variant="outline" className="w-full rounded-full">
@@ -237,7 +237,7 @@ const PaymentCallbackPage = () => {
                 </div>
                 <div className="p-4 rounded-lg" style={{ background: 'var(--accent-wash)' }}>
                   <p className="body-small" style={{ color: 'var(--text-secondary)' }}>
-                    Your loan application is now under review. We'll notify you via email
+                    Your loan application is now under review. We&apos;ll notify you via email
                     within 24 hours. Please login to track your application status.
                   </p>
                 </div>
