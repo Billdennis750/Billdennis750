@@ -132,3 +132,60 @@ async def health_check():
         "service": "cashflow-mfb-api",
         "version": "1.0.0"
     }
+
+@app.post("/api/admin/send-reminders")
+async def trigger_reminders():
+    """Manually trigger payment reminders (admin only)"""
+    try:
+        from motor.motor_asyncio import AsyncIOMotorClient
+        from config import get_settings
+        
+        settings = get_settings()
+        client = AsyncIOMotorClient(settings.mongo_url)
+        db = client[settings.db_name]
+        
+        reminders_sent = 0
+        
+        # Send to pending processing fee
+        pending_processing = await db.applications.find({
+            "status": "pending_payment",
+            "processing_fee_paid": False
+        }).to_list(100)
+        
+        for app in pending_processing:
+            result = await email_service.send_payment_reminder(
+                app["email"],
+                app["full_name"],
+                app["application_id"],
+                "processing_fee",
+                2500
+            )
+            if result:
+                reminders_sent += 1
+        
+        # Send to pending deposit
+        pending_deposit = await db.applications.find({
+            "status": "approved",
+            "deposit_paid": False
+        }).to_list(100)
+        
+        for app in pending_deposit:
+            result = await email_service.send_payment_reminder(
+                app["email"],
+                app["full_name"],
+                app["application_id"],
+                "deposit",
+                3000
+            )
+            if result:
+                reminders_sent += 1
+        
+        client.close()
+        
+        return {
+            "success": True,
+            "reminders_sent": reminders_sent
+        }
+    except Exception as e:
+        logger.error(f"Manual reminder trigger error: {str(e)}")
+        return {"success": False, "error": str(e)}
