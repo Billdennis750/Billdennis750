@@ -599,5 +599,106 @@ class EmailService:
             to_email, customer_name, application_id, amount,
             "6_months", "monthly", "N/A", "N/A"
         )
+    
+    async def send_password_reset(self, to_email: str, customer_name: str, reset_token: str):
+        """Send password reset email with reset link"""
+        try:
+            reset_link = f"{self.base_url}/reset-password?token={reset_token}"
+            
+            content = f'''
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: #e7f3ff; border-radius: 50%; padding: 20px; margin-bottom: 15px;">
+                    <span style="font-size: 40px;">🔐</span>
+                </div>
+                <h2 style="color: #333; margin: 0; font-size: 24px;">Password Reset Request</h2>
+            </div>
+            
+            <p style="color: #555; font-size: 16px; line-height: 1.6;">Dear <strong>{customer_name}</strong>,</p>
+            <p style="color: #555; font-size: 16px; line-height: 1.6;">
+                We received a request to reset your password for your Cashflow MFB account.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_link}" style="display: inline-block; background: linear-gradient(135deg, #0d7916 0%, #0a5c12 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(13, 121, 22, 0.3);">
+                    Reset My Password
+                </a>
+            </div>
+            
+            <p style="color: #999; font-size: 14px; text-align: center; margin: 20px 0;">
+                Or copy and paste this link into your browser:
+            </p>
+            <p style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 12px; word-break: break-all; color: #666; text-align: center;">
+                {reset_link}
+            </p>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <p style="color: #856404; margin: 0; font-size: 14px;">
+                    <strong>⚠️ Important:</strong><br>
+                    • This link will expire in 1 hour<br>
+                    • If you didn't request this reset, please ignore this email<br>
+                    • Never share this link with anyone
+                </p>
+            </div>
+            
+            <p style="color: #555; font-size: 14px; line-height: 1.6;">
+                If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+            </p>
+            '''
+            
+            message = Mail(
+                from_email=self.from_email,
+                to_emails=to_email,
+                subject='Password Reset Request | Cashflow MFB',
+                html_content=self._get_email_template(content)
+            )
+            response = self.client.send(message)
+            logger.info(f"Password reset email sent to {to_email}: {response.status_code}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send password reset email: {str(e)}")
+            return False
+    
+    async def send_password_changed(self, to_email: str, customer_name: str):
+        """Send confirmation email when password is successfully changed"""
+        try:
+            content = f'''
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: #d4edda; border-radius: 50%; padding: 20px; margin-bottom: 15px;">
+                    <span style="font-size: 40px;">✓</span>
+                </div>
+                <h2 style="color: #0d7916; margin: 0; font-size: 24px;">Password Changed Successfully</h2>
+            </div>
+            
+            <p style="color: #555; font-size: 16px; line-height: 1.6;">Dear <strong>{customer_name}</strong>,</p>
+            <p style="color: #555; font-size: 16px; line-height: 1.6;">
+                Your password has been successfully changed. You can now log in with your new password.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{self.base_url}/login" style="display: inline-block; background: linear-gradient(135deg, #0d7916 0%, #0a5c12 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 16px;">
+                    Login to Your Account
+                </a>
+            </div>
+            
+            <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <p style="color: #721c24; margin: 0; font-size: 14px;">
+                    <strong>⚠️ Didn't change your password?</strong><br>
+                    If you didn't make this change, please contact our support team immediately at payment@cashflowsmfb.com
+                </p>
+            </div>
+            '''
+            
+            message = Mail(
+                from_email=self.from_email,
+                to_emails=to_email,
+                subject='Password Changed Successfully | Cashflow MFB',
+                html_content=self._get_email_template(content)
+            )
+            response = self.client.send(message)
+            logger.info(f"Password changed confirmation email sent to {to_email}: {response.status_code}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send password changed email: {str(e)}")
+            return False
 
 email_service = EmailService()
