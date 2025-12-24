@@ -594,6 +594,62 @@ class EmailService:
             logger.error(f"Failed to send rejection email: {str(e)}")
             return False
     
+    async def send_disbursement_declined(self, to_email: str, customer_name: str, application_id: str, reason: str):
+        """Send email when loan disbursement is declined by admin"""
+        try:
+            content = f'''
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: #f8d7da; border-radius: 50%; padding: 20px; margin-bottom: 15px;">
+                    <span style="font-size: 40px;">⚠️</span>
+                </div>
+                <h2 style="color: #721c24; margin: 0; font-size: 24px;">Disbursement Update</h2>
+            </div>
+            
+            <p style="color: #555; font-size: 16px; line-height: 1.6;">Dear <strong>{customer_name}</strong>,</p>
+            <p style="color: #555; font-size: 16px; line-height: 1.6;">
+                We regret to inform you that your loan disbursement for application <strong>{application_id}</strong> could not be processed at this time.
+            </p>
+            
+            <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <h3 style="color: #721c24; margin: 0 0 10px 0; font-size: 16px;">Reason</h3>
+                <p style="color: #721c24; margin: 0; font-size: 14px;">
+                    {reason}
+                </p>
+            </div>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <h3 style="color: #856404; margin: 0 0 10px 0; font-size: 16px;">What You Can Do</h3>
+                <ul style="color: #856404; margin: 0; padding-left: 20px; font-size: 14px;">
+                    <li>Contact our support team for more details</li>
+                    <li>Review your application documents</li>
+                    <li>You may be eligible to reapply after addressing any issues</li>
+                </ul>
+            </div>
+            
+            <p style="color: #555; font-size: 14px; line-height: 1.6;">
+                If you believe this decision was made in error or have any questions, please contact our support team at <a href="mailto:payment@cashflowsmfb.com" style="color: #0d7916;">payment@cashflowsmfb.com</a>.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{self.base_url}/login" style="display: inline-block; background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 16px;">
+                    View Dashboard
+                </a>
+            </div>
+            '''
+            
+            message = Mail(
+                from_email=self.from_email,
+                to_emails=to_email,
+                subject='Disbursement Update | Cashflow MFB',
+                html_content=self._get_email_template(content)
+            )
+            response = self.client.send(message)
+            logger.info(f"Disbursement declined email sent to {to_email}: {response.status_code}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send disbursement declined email: {str(e)}")
+            return False
+    
     async def send_application_approved(self, to_email: str, customer_name: str, application_id: str, amount: float):
         """Legacy method - redirects to send_loan_approved"""
         return await self.send_loan_approved(
