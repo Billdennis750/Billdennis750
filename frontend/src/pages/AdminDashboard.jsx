@@ -72,6 +72,13 @@ const AdminDashboard = () => {
   // Document Preview State
   const [documentPreview, setDocumentPreview] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  
+  // User Delete State
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
+  const [userDetails, setUserDetails] = useState(null);
+  const [loadingUserDetails, setLoadingUserDetails] = useState(false);
 
   useEffect(() => {
     fetchData();
