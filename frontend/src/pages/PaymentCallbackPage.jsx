@@ -174,8 +174,7 @@ const PaymentCallbackPage = () => {
   };
 
   const handleVerifyClick = () => {
-    setStatus('verifying');
-    verifyPayment();
+    verifyPaymentManual();
   };
 
   return (
