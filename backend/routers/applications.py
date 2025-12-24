@@ -114,7 +114,10 @@ async def submit_application(
             "date_of_birth": datetime.fromisoformat(date_of_birth),
             "email": email,
             "phone": phone,
+            "secondary_phone": secondary_phone,
+            "relative_phone": relative_phone,
             "home_town": home_town,
+            "flat_house_number": flat_house_number,
             "residential_address": residential_address,
             # Employment & Income
             "place_of_work": place_of_work,
