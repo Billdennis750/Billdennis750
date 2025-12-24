@@ -129,3 +129,192 @@ async def get_activity_logs(db=Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get activity logs"
         )
+
+
+@router.post("/send-reminders", response_model=dict)
+async def send_email_reminders(request: SendReminderRequest, db=Depends(get_db)):
+    """Send payment reminder emails to selected users"""
+    try:
+        sent_count = 0
+        failed_count = 0
+        results = []
+        
+        for email in request.user_emails:
+            # Find the user's application
+            application = await db.applications.find_one({"email": email})
+            
+            if not application:
+                results.append({"email": email, "status": "failed", "reason": "No application found"})
+                failed_count += 1
+                continue
+            
+            # Determine what reminder to send based on application status
+            reminder_sent = False
+            
+            # Check if processing fee reminder needed
+            if request.reminder_type in ["processing_fee", "all"]:
+                if not application.get("processing_fee_paid", False):
+                    try:
+                        await email_service.send_payment_reminder(
+                            email,
+                            application["full_name"],
+                            application["application_id"],
+                            "processing_fee",
+                            2500
+                        )
+                        reminder_sent = True
+                        results.append({"email": email, "status": "sent", "type": "processing_fee"})
+                    except Exception as e:
+                        results.append({"email": email, "status": "failed", "reason": str(e)})
+                        failed_count += 1
+                        continue
+            
+            # Check if deposit reminder needed
+            if request.reminder_type in ["deposit", "all"]:
+                if application.get("processing_fee_paid", False) and not application.get("deposit_paid", False) and application.get("status") == "approved":
+                    try:
+                        await email_service.send_payment_reminder(
+                            email,
+                            application["full_name"],
+                            application["application_id"],
+                            "deposit",
+                            3000
+                        )
+                        reminder_sent = True
+                        results.append({"email": email, "status": "sent", "type": "deposit"})
+                    except Exception as e:
+                        results.append({"email": email, "status": "failed", "reason": str(e)})
+                        failed_count += 1
+                        continue
+            
+            if reminder_sent:
+                sent_count += 1
+            elif not any(r["email"] == email for r in results):
+                results.append({"email": email, "status": "skipped", "reason": "No pending payment"})
+        
+        return {
+            "message": f"Sent {sent_count} reminders, {failed_count} failed",
+            "sent": sent_count,
+            "failed": failed_count,
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"Send reminders error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send reminders"
+        )
+
+
+@router.post("/send-reminder-all", response_model=dict)
+async def send_reminder_to_all_pending(db=Depends(get_db)):
+    """Send payment reminders to ALL users with pending payments"""
+    try:
+        sent_count = 0
+        
+        # Get all applications with pending processing fee
+        pending_processing = await db.applications.find({
+            "processing_fee_paid": False
+        }).to_list(1000)
+        
+        for app in pending_processing:
+            try:
+                await email_service.send_payment_reminder(
+                    app["email"],
+                    app["full_name"],
+                    app["application_id"],
+                    "processing_fee",
+                    2500
+                )
+                sent_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send reminder to {app['email']}: {e}")
+        
+        # Get all approved applications with pending deposit
+        pending_deposit = await db.applications.find({
+            "processing_fee_paid": True,
+            "deposit_paid": False,
+            "status": "approved"
+        }).to_list(1000)
+        
+        for app in pending_deposit:
+            try:
+                await email_service.send_payment_reminder(
+                    app["email"],
+                    app["full_name"],
+                    app["application_id"],
+                    "deposit",
+                    3000
+                )
+                sent_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send reminder to {app['email']}: {e}")
+        
+        return {
+            "message": f"Successfully sent {sent_count} reminder emails",
+            "sent": sent_count
+        }
+    except Exception as e:
+        logger.error(f"Send all reminders error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send reminders"
+        )
+
+
+@router.get("/applications/{application_id}/documents", response_model=dict)
+async def get_application_documents(application_id: str, db=Depends(get_db)):
+    """Get document URLs for an application"""
+    try:
+        application = await db.applications.find_one(
+            {"application_id": application_id},
+            {"_id": 0, "id_card_url": 1, "passport_url": 1, "full_name": 1}
+        )
+        
+        if not application:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Application not found"
+            )
+        
+        return {
+            "application_id": application_id,
+            "applicant_name": application.get("full_name"),
+            "documents": {
+                "id_card": application.get("id_card_url"),
+                "passport": application.get("passport_url")
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get documents error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get documents"
+        )
+
+
+@router.get("/document/{doc_type}/{filename}")
+async def serve_document(doc_type: str, filename: str):
+    """Serve uploaded document files"""
+    try:
+        # Construct file path
+        upload_dir = os.environ.get("UPLOAD_DIR", "/app/backend/uploads")
+        file_path = os.path.join(upload_dir, doc_type, filename)
+        
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        return FileResponse(file_path)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Serve document error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to serve document"
+        )
