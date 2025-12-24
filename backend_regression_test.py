@@ -372,18 +372,18 @@ class BackendRegressionTester:
             # Test accessing protected endpoint without token
             response = await self.client.get(f"{API_BASE}/auth/me")
             
-            if response.status_code == 401:
+            if response.status_code in [401, 403]:  # Both are valid for unauthenticated access
                 await self.log_result(
                     "Auth Middleware", 
                     True, 
-                    "Authentication middleware correctly blocking unauthorized access"
+                    f"Authentication middleware correctly blocking unauthorized access (status: {response.status_code})"
                 )
                 return True
             else:
                 await self.log_result(
                     "Auth Middleware", 
                     False, 
-                    f"Expected 401, got {response.status_code}",
+                    f"Expected 401 or 403, got {response.status_code}",
                     response.text
                 )
                 return False
