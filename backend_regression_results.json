@@ -1,0 +1,65 @@
+{
+  "summary": {
+    "passed": 4,
+    "total": 8
+  },
+  "results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "message": "Backend is healthy and responding",
+      "details": null,
+      "timestamp": "2025-12-24T16:25:45.941710"
+    },
+    {
+      "test": "User Registration",
+      "success": true,
+      "message": "User registration working correctly",
+      "details": "User ID: 694c140ac68e1cafd5465a38",
+      "timestamp": "2025-12-24T16:25:46.232129"
+    },
+    {
+      "test": "Admin Login",
+      "success": true,
+      "message": "Admin login successful with correct credentials",
+      "details": "Admin: Cashflows Mfb (kdride6@gmail.com)",
+      "timestamp": "2025-12-24T16:25:46.544956"
+    },
+    {
+      "test": "Password Reset API",
+      "success": true,
+      "message": "Forgot password endpoint working correctly",
+      "details": null,
+      "timestamp": "2025-12-24T16:25:46.560814"
+    },
+    {
+      "test": "Loan Application Submission",
+      "success": false,
+      "message": "Application submission failed with status 422",
+      "details": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"repayment_duration\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"}]}",
+      "timestamp": "2025-12-24T16:25:46.581876"
+    },
+    {
+      "test": "Admin Dashboard API",
+      "success": false,
+      "message": "Admin stats failed with status 520",
+      "details": "{\"detail\":\"Failed to get statistics\"}",
+      "timestamp": "2025-12-24T16:25:46.591486"
+    },
+    {
+      "test": "Payment Endpoints Basic",
+      "success": false,
+      "message": "No test application available",
+      "details": null,
+      "timestamp": "2025-12-24T16:25:46.591510"
+    },
+    {
+      "test": "Auth Middleware",
+      "success": false,
+      "message": "Expected 401, got 403",
+      "details": "{\"detail\":\"Not authenticated\"}",
+      "timestamp": "2025-12-24T16:25:46.642006"
+    }
+  ],
+  "test_type": "backend_regression"
+}
