@@ -5,9 +5,12 @@ from dotenv import load_dotenv
 from pathlib import Path
 import logging
 from contextlib import asynccontextmanager
-from database import connect_db, close_db
+from database import connect_db, close_db, get_db
 from routers import auth, applications, payments, admin
+from utils.email import email_service
+from datetime import datetime, timezone, timedelta
 import os
+import asyncio
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
@@ -20,14 +23,78 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Background task for payment reminders
+async def send_payment_reminders():
+    """Send payment reminders every 24 hours for pending payments"""
+    while True:
+        try:
+            logger.info("Running payment reminder task...")
+            from motor.motor_asyncio import AsyncIOMotorClient
+            from config import get_settings
+            
+            settings = get_settings()
+            client = AsyncIOMotorClient(settings.mongo_url)
+            db = client[settings.db_name]
+            
+            # Get applications with pending payment (processing fee)
+            pending_processing = await db.applications.find({
+                "status": "pending_payment",
+                "processing_fee_paid": False
+            }).to_list(1000)
+            
+            for app in pending_processing:
+                # Check if created more than 24 hours ago
+                created = app.get("created_at")
+                if created and (datetime.now(timezone.utc) - created) > timedelta(hours=24):
+                    await email_service.send_payment_reminder(
+                        app["email"],
+                        app["full_name"],
+                        app["application_id"],
+                        "processing_fee",
+                        2500
+                    )
+                    logger.info(f"Sent processing fee reminder to {app['email']}")
+            
+            # Get applications with pending deposit
+            pending_deposit = await db.applications.find({
+                "status": "approved",
+                "deposit_paid": False
+            }).to_list(1000)
+            
+            for app in pending_deposit:
+                approved_at = app.get("approved_at")
+                if approved_at and (datetime.now(timezone.utc) - approved_at) > timedelta(hours=24):
+                    await email_service.send_payment_reminder(
+                        app["email"],
+                        app["full_name"],
+                        app["application_id"],
+                        "deposit",
+                        3000
+                    )
+                    logger.info(f"Sent deposit reminder to {app['email']}")
+            
+            client.close()
+            
+        except Exception as e:
+            logger.error(f"Payment reminder task error: {str(e)}")
+        
+        # Wait 24 hours before next run
+        await asyncio.sleep(86400)  # 24 hours in seconds
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Cashflow MFB API")
     await connect_db()
+    
+    # Start background task for payment reminders
+    reminder_task = asyncio.create_task(send_payment_reminders())
+    
     yield
+    
     # Shutdown
     logger.info("Shutting down Cashflow MFB API")
+    reminder_task.cancel()
     await close_db()
 
 # Create FastAPI app
