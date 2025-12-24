@@ -103,6 +103,98 @@ async def delete_user_data(request: DeleteUserRequest, db=Depends(get_db)):
         }
     }
 
+@router.delete("/users/{email}", response_model=dict)
+async def admin_delete_user(email: str, token_data=Depends(get_current_user), db=Depends(get_db)):
+    """Delete a user and all their data (Admin only)"""
+    try:
+        # Verify admin role
+        admin = await db.users.find_one({"email": token_data.email})
+        if not admin or admin.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Prevent admin from deleting themselves
+        if email == token_data.email:
+            raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
+        
+        # Check if user exists
+        user = await db.users.find_one({"email": email})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Prevent deleting other admins
+        if user.get("role") == "admin":
+            raise HTTPException(status_code=400, detail="Cannot delete admin accounts")
+        
+        # Delete from all collections
+        user_result = await db.users.delete_many({"email": email})
+        app_result = await db.applications.delete_many({"email": email})
+        reset_result = await db.password_resets.delete_many({"email": email})
+        txn_result = await db.transactions.delete_many({"email": email})
+        
+        logger.info(f"Admin {token_data.email} deleted user {email}")
+        
+        return {
+            "message": f"Successfully deleted user {email} and all associated data",
+            "deleted": {
+                "user": user_result.deleted_count,
+                "applications": app_result.deleted_count,
+                "password_resets": reset_result.deleted_count,
+                "transactions": txn_result.deleted_count
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete user error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user"
+        )
+
+@router.get("/users/{email}/details", response_model=dict)
+async def get_user_details(email: str, token_data=Depends(get_current_user), db=Depends(get_db)):
+    """Get detailed information about a user (Admin only)"""
+    try:
+        # Verify admin role
+        admin = await db.users.find_one({"email": token_data.email})
+        if not admin or admin.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Get user
+        user = await db.users.find_one({"email": email}, {"_id": 0, "password_hash": 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get user's applications
+        applications = await db.applications.find(
+            {"email": email}, 
+            {"_id": 0}
+        ).to_list(100)
+        
+        # Get user's transactions
+        transactions = await db.transactions.find(
+            {"email": email},
+            {"_id": 0}
+        ).to_list(100)
+        
+        return {
+            "user": user,
+            "applications": applications,
+            "transactions": transactions,
+            "summary": {
+                "total_applications": len(applications),
+                "total_transactions": len(transactions)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get user details error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get user details"
+        )
+
 @router.get("/stats", response_model=dict)
 async def get_admin_stats(db=Depends(get_db)):
     try:
