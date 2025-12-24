@@ -133,8 +133,9 @@ app.include_router(admin.router)
 
 # Mount uploads directory
 upload_dir = os.environ.get('UPLOAD_DIR', '/app/backend/uploads')
-if os.path.exists(upload_dir):
-    app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
+if not os.path.exists(upload_dir):
+    os.makedirs(upload_dir, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 @app.get("/api/health")
 async def health_check():
