@@ -79,6 +79,14 @@ const AdminDashboard = () => {
       const apps = appsRes.data.applications || [];
       setApplications(apps);
       
+      // Fetch users
+      try {
+        const usersRes = await axios.get(`${API}/admin/users`, { headers });
+        setUsers(usersRes.data.users || []);
+      } catch (e) {
+        console.log('Users endpoint not available');
+      }
+      
       // Fetch transactions
       try {
         const txnRes = await axios.get(`${API}/admin/transactions`, { headers });
