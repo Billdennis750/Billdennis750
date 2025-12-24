@@ -371,6 +371,9 @@ frontend:
       - working: true
         agent: "main"
         comment: "Updated contact email to payment@cashflowsmfb.com as per user request."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Footer shows correct email payment@cashflowsmfb.com and FAQ link is present in Quick Links section. All footer updates verified."
 
 metadata:
   created_by: "main_agent"
