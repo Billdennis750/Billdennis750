@@ -1,0 +1,71 @@
+{
+  "summary": {
+    "passed": 6,
+    "total": 6
+  },
+  "results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "message": "Backend is running",
+      "details": null,
+      "timestamp": "2025-12-24T17:45:18.924330"
+    },
+    {
+      "test": "Admin Login",
+      "success": true,
+      "message": "Admin logged in successfully",
+      "details": null,
+      "timestamp": "2025-12-24T17:45:19.163178"
+    },
+    {
+      "test": "Admin Users Endpoint",
+      "success": true,
+      "message": "Retrieved 10 users",
+      "details": null,
+      "timestamp": "2025-12-24T17:45:19.176767"
+    },
+    {
+      "test": "Applications List Endpoint",
+      "success": true,
+      "message": "Retrieved 5 applications",
+      "details": null,
+      "timestamp": "2025-12-24T17:45:19.187027"
+    },
+    {
+      "test": "Disbursement Endpoint Structure",
+      "success": true,
+      "message": "Endpoint correctly validates required fields",
+      "details": null,
+      "timestamp": "2025-12-24T17:45:19.236706"
+    },
+    {
+      "test": "Invalid Application ID Test",
+      "success": true,
+      "message": "Correctly rejected invalid application ID",
+      "details": null,
+      "timestamp": "2025-12-24T17:45:19.247734"
+    },
+    {
+      "test": "Invalid Decision Test",
+      "success": true,
+      "message": "Correctly rejected invalid decision",
+      "details": null,
+      "timestamp": "2025-12-24T17:45:19.297013"
+    },
+    {
+      "test": "Application Status Validation",
+      "success": true,
+      "message": "Correctly validates application must be in deposit_paid status",
+      "details": "Application must be in 'deposit_paid' status. Current status: approved",
+      "timestamp": "2025-12-24T17:45:19.350151"
+    },
+    {
+      "test": "Payment Webhook Endpoint",
+      "success": true,
+      "message": "Webhook endpoint accessible and processing requests",
+      "details": "Response: Transaction not found",
+      "timestamp": "2025-12-24T17:45:19.359304"
+    }
+  ]
+}
