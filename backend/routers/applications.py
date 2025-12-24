@@ -27,7 +27,10 @@ async def submit_application(
     date_of_birth: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
+    secondary_phone: str = Form(""),
+    relative_phone: str = Form(...),
     home_town: str = Form(...),
+    flat_house_number: str = Form(...),
     residential_address: str = Form(...),
     # Employment & Income
     place_of_work: str = Form(...),
