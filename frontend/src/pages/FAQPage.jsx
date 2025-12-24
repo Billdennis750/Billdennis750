@@ -139,7 +139,7 @@ const FAQPage = () => {
           <div className="mt-12 text-center p-8 rounded-lg" style={{ background: 'var(--bg-section)' }}>
             <h2 className="heading-2 mb-4">Still Have Questions?</h2>
             <p className="body-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Can't find the answer you're looking for? Our support team is here to help.
+              Cannot find the answer you are looking for? Our support team is here to help.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="mailto:payment@cashflowsmfb.com">
