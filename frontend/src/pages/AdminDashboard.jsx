@@ -63,6 +63,15 @@ const AdminDashboard = () => {
     confirmPassword: ''
   });
   const [changingPassword, setChangingPassword] = useState(false);
+  
+  // Email Reminders State
+  const [selectedUsersForReminder, setSelectedUsersForReminder] = useState([]);
+  const [reminderType, setReminderType] = useState('all');
+  const [sendingReminders, setSendingReminders] = useState(false);
+  
+  // Document Preview State
+  const [documentPreview, setDocumentPreview] = useState(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
 
   useEffect(() => {
     fetchData();
