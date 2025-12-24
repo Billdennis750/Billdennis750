@@ -247,11 +247,14 @@ frontend:
     file: "/app/frontend/src/pages/FAQPage.jsx"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Just implemented FAQ page with 17 standard microfinance questions. Accordion-style expandable questions. Screenshot verified working."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: FAQ page loads with correct heading 'Frequently Asked Questions' and subtitle 'Everything you need to know about Cashflow MFB loans'. FAQ accordions expand/collapse correctly on click. Contact email payment@cashflowsmfb.com displayed correctly. All FAQ functionality working as expected."
 
   - task: "Forgot Password Page"
     implemented: true
