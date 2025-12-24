@@ -200,7 +200,7 @@ const IdentityStep = ({ initialData, onNext, onBack }) => {
                   </div>
                 </FormControl>
                 <FormDescription>
-                  Minimum 6 characters. You'll use this to login to your dashboard.
+                  Minimum 6 characters. You&apos;ll use this to login to your dashboard.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

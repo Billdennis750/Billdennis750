@@ -45,7 +45,7 @@ const AboutUsPage = () => {
                 <strong>Cashflow Microfinance Bank (Cashflow MFB)</strong> is a customer-focused financial institution committed to providing fast, reliable, and accessible loan solutions to Nigerians. We exist to remove financial barriers and help individuals and businesses move forward with confidence—without the burden of collateral or unnecessary delays.
               </p>
               <p className="body-medium" style={{ color: 'var(--text-body)' }}>
-                We understand that access to timely funding can make all the difference. That's why we have built a simple, transparent, and technology-driven lending platform designed to support growth, stability, and opportunity.
+                We understand that access to timely funding can make all the difference. That&apos;s why we have built a simple, transparent, and technology-driven lending platform designed to support growth, stability, and opportunity.
               </p>
             </div>
           </section>

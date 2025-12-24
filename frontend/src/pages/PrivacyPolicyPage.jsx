@@ -34,7 +34,7 @@ const PrivacyPolicyPage = () => {
             {/* Introduction */}
             <section>
               <p className="body-medium" style={{ color: 'var(--text-body)' }}>
-                Cashflow Microfinance Bank ("Cashflow MFB", "we", "our", or "us") is committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your information when you use our website, loan application platform, and related services.
+                Cashflow Microfinance Bank (&quot;Cashflow MFB&quot;, &quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, store, share, and protect your information when you use our website, loan application platform, and related services.
               </p>
               <p className="body-medium mt-4" style={{ color: 'var(--text-body)' }}>
                 By accessing or using our services, you agree to the collection and use of your information as described in this Privacy Policy.
