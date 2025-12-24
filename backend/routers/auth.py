@@ -125,3 +125,161 @@ async def get_current_user_info(token_data=Depends(get_current_user), db=Depends
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user info"
         )
+
+@router.post("/forgot-password", response_model=dict)
+async def forgot_password(request: ForgotPasswordRequest, db=Depends(get_db)):
+    """Send password reset email"""
+    try:
+        # Find user
+        user = await db.users.find_one({"email": request.email})
+        
+        # Always return success to prevent email enumeration
+        if not user:
+            return {"message": "If an account exists with this email, you will receive a password reset link."}
+        
+        # Generate reset token
+        reset_token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        
+        # Store reset token
+        await db.password_resets.delete_many({"email": request.email})  # Remove any existing tokens
+        await db.password_resets.insert_one({
+            "email": request.email,
+            "token": reset_token,
+            "expires_at": expires_at,
+            "created_at": datetime.now(timezone.utc)
+        })
+        
+        # Send reset email
+        await email_service.send_password_reset(
+            request.email,
+            user.get("full_name", "User"),
+            reset_token
+        )
+        
+        return {"message": "If an account exists with this email, you will receive a password reset link."}
+    except Exception as e:
+        logger.error(f"Forgot password error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process request"
+        )
+
+@router.post("/reset-password", response_model=dict)
+async def reset_password(request: ResetPasswordRequest, db=Depends(get_db)):
+    """Reset password using token"""
+    try:
+        # Find and validate token
+        reset_record = await db.password_resets.find_one({"token": request.token})
+        
+        if not reset_record:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset link"
+            )
+        
+        # Check if token is expired
+        if reset_record["expires_at"] < datetime.now(timezone.utc):
+            await db.password_resets.delete_one({"token": request.token})
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reset link has expired. Please request a new one."
+            )
+        
+        # Validate password
+        if len(request.new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 8 characters long"
+            )
+        
+        # Find user
+        user = await db.users.find_one({"email": reset_record["email"]})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Update password
+        await db.users.update_one(
+            {"email": reset_record["email"]},
+            {"$set": {
+                "password_hash": get_password_hash(request.new_password),
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        # Delete used token
+        await db.password_resets.delete_one({"token": request.token})
+        
+        # Send confirmation email
+        await email_service.send_password_changed(
+            reset_record["email"],
+            user.get("full_name", "User")
+        )
+        
+        return {"message": "Password reset successful. You can now login with your new password."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Reset password error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset password"
+        )
+
+@router.post("/change-password", response_model=dict)
+async def change_password(
+    request: ChangePasswordRequest,
+    token_data=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Change password for authenticated user"""
+    try:
+        # Find user
+        user = await db.users.find_one({"email": token_data.email})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Verify current password
+        if not verify_password(request.current_password, user["password_hash"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect"
+            )
+        
+        # Validate new password
+        if len(request.new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be at least 8 characters long"
+            )
+        
+        # Update password
+        await db.users.update_one(
+            {"email": token_data.email},
+            {"$set": {
+                "password_hash": get_password_hash(request.new_password),
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        # Send confirmation email
+        await email_service.send_password_changed(
+            token_data.email,
+            user.get("full_name", "User")
+        )
+        
+        return {"message": "Password changed successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Change password error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password"
+        )
