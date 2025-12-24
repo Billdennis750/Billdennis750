@@ -67,9 +67,31 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         # Get phone number - use provided or extract from application
         phone_number = payment.customer_phone
         if not phone_number and application:
-            phone_number = application.get("phone", "08000000000")
+            phone_number = application.get("phone", "")
         if not phone_number:
-            phone_number = "08000000000"  # Default placeholder
+            phone_number = "08012345678"  # Default placeholder
+        
+        # Format phone number to be exactly 11 digits for Xixapay
+        # Remove any non-digit characters
+        phone_number = ''.join(filter(str.isdigit, str(phone_number)))
+        
+        # Handle different phone formats
+        if phone_number.startswith('234') and len(phone_number) == 13:
+            # Nigerian format with country code: 2348012345678 -> 08012345678
+            phone_number = '0' + phone_number[3:]
+        elif phone_number.startswith('234') and len(phone_number) > 13:
+            phone_number = '0' + phone_number[3:14]
+        elif len(phone_number) == 10 and not phone_number.startswith('0'):
+            # Missing leading 0: 8012345678 -> 08012345678
+            phone_number = '0' + phone_number
+        elif len(phone_number) > 11:
+            # Truncate to 11 digits
+            phone_number = phone_number[:11]
+        elif len(phone_number) < 11:
+            # Pad with zeros or use default
+            phone_number = "08012345678"
+        
+        logger.info(f"Formatted phone number: {phone_number} (length: {len(phone_number)})")
         
         # Prepare Xixapay Dynamic Virtual Account payload
         # Using Xixapay's createVirtualAccount endpoint for dynamic account
