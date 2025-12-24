@@ -2,14 +2,15 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from config import get_settings
 import logging
+import os
 from datetime import datetime
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
-# Logo URL for emails
-LOGO_URL = "https://customer-assets.emergentagent.com/job_microfin-portal/artifacts/yv8s58dq_1000315618-removebg-preview.png"
-WEBSITE_URL = "https://lendflow-hub.preview.emergentagent.com"
+# Logo URL for emails (can be overridden by environment variable)
+LOGO_URL = os.environ.get("LOGO_URL", "https://customer-assets.emergentagent.com/job_microfin-portal/artifacts/yv8s58dq_1000315618-removebg-preview.png")
+WEBSITE_URL = os.environ.get("BACKEND_URL", "https://cashflowsmfb.com")
 
 class EmailService:
     def __init__(self):
