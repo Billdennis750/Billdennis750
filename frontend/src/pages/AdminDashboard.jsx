@@ -1110,6 +1110,85 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* User Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={closeDeleteModal}>
+          <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b bg-red-50 flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-red-800">Delete User Account</h3>
+                <p className="text-sm text-red-600">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingUserDetails ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="w-8 h-8 animate-spin mx-auto text-gray-400" />
+                  <p className="mt-2 text-gray-500">Loading user details...</p>
+                </div>
+              ) : userDetails ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-semibold mb-2">User Information</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <p><span className="text-gray-500">Name:</span> {userDetails.user?.full_name}</p>
+                      <p><span className="text-gray-500">Email:</span> {userDetails.user?.email}</p>
+                      <p><span className="text-gray-500">Phone:</span> {userDetails.user?.phone || 'N/A'}</p>
+                      <p><span className="text-gray-500">Registered:</span> {userDetails.user?.created_at ? new Date(userDetails.user.created_at).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <h4 className="font-semibold text-yellow-800 mb-2">Data to be Deleted:</h4>
+                    <ul className="text-sm text-yellow-700 space-y-1">
+                      <li>• User account and profile</li>
+                      <li>• {userDetails.summary?.total_applications || 0} loan application(s)</li>
+                      <li>• {userDetails.summary?.total_transactions || 0} transaction record(s)</li>
+                      <li>• All uploaded documents</li>
+                      <li>• Password reset tokens</li>
+                    </ul>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">
+                    Are you sure you want to permanently delete <strong>{userDetails.user?.full_name}</strong> ({userDetails.user?.email}) and all associated data?
+                  </p>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500">No user data available</p>
+              )}
+            </div>
+            
+            <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+              <Button variant="outline" onClick={closeDeleteModal} disabled={deletingUser}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteUser}
+                disabled={deletingUser || !userDetails}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deletingUser ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Permanently
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Document Preview Modal */}
       {showDocumentModal && documentPreview && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowDocumentModal(false)}>
