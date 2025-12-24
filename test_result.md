@@ -345,6 +345,30 @@ frontend:
         agent: "testing"
         comment: "✅ TESTED: Admin Dashboard Settings tab verified. Change Password form has all required fields (Current Password, New Password, Confirm New Password). Account Information section displays admin details (Full Name: Cashflow Mfb, Email: kdride6@gmail.com, Role: Admin). All Settings tab functionality working correctly."
 
+  - task: "Admin Reminders Tab"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminDashboard.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Admin Reminders Tab fully functional. Verified: 1) Reminders tab exists in navigation, 2) 'Send Reminders to Selected Users' section with Reminder Type dropdown (All Pending Payments, Processing Fee Only, Deposit Only), 3) User selection list with checkboxes, 4) Send Reminders button enabled after user selection, 5) Quick Actions section with 'Send to All Pending Users' button, 6) Reminder Statistics showing counts (1 Pending Processing Fee, 0 Pending Deposit), 7) Auto Reminders info section. All features working as expected."
+
+  - task: "Document Preview in Applications Tab"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminDashboard.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Document Preview functionality working correctly. Verified: 1) Applications tab has expandable rows, 2) Expanded rows show 'Documents' section, 3) 'View ID Card' and 'View Passport' buttons present, 4) Clicking buttons opens document preview modal with proper header (document type, applicant name), 5) Modal shows 'Image not found' when no document uploaded (expected behavior), 6) Download button present in modal, 7) Modal can be closed properly. All document preview features functional."
+
   - task: "Login Page"
     implemented: true
     working: true
