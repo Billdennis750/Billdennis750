@@ -1,87 +1,112 @@
 <analysis>**original_problem_statement:**
-The user wants to build a professional website for a microfinance bank, Cashflow MFB. The initial goal was a simple loan application platform. This has evolved significantly to include a complex, multi-stage loan and repayment process.
+The user initially requested a website for a microfinance bank, Cashflow MFB, for users to apply for loans. This evolved into a complex platform with a 5-step application, a multi-stage loan status system, two separate payments (processing fee and fixed deposit) via Xixapay, user/admin dashboards, and SendGrid email notifications.
 
-**PRODUCT REQUIREMENTS:**
-1.  **Core Functionality**: A platform for users to apply for collateral-free loans.
-2.  **Complex Loan Flow**:
-    *   A 5-step application form (Personal, Employment, Bank Details, Loan/Repayment Preferences, Identity & Account Creation).
-    *   Applications are saved with a Payment Pending status before any fee is paid.
-    *   A **₦2,500 processing fee** is required to move the application to Under Review.
-    *   After approval, the user must pay a **₦3,000 fixed deposit** to proceed.
-    *   The loan is disbursed 24 hours after the deposit is paid.
-    *   The system must track multiple statuses: , , , , , .
-3.  **User Authentication**: Users create their accounts during the loan application process and can log in with an email and password.
-4.  **Payment Integration**: The system is integrated with **Xixapay** to handle the two separate payments (processing fee and fixed deposit) via a bank transfer/virtual account method.
-5.  **User Dashboard**: A personal dashboard for users to track their detailed loan application status, see repayment information, and initiate pending payments. The UI has been enhanced for a professional fintech look.
-6.  **Admin Dashboard**: A comprehensive dashboard for administrators to manage users, view all application details, monitor all payment transactions, and see platform statistics (total users, total paid, etc.).
-7.  **Email Notifications**: Automated emails are sent for key events (e.g., application submission, approval, payment confirmation) using **SendGrid**. Emails are branded with the company logo.
-8.  **Automated Reminders**: A background task sends email reminders every 24 hours to users who have pending payments.
-9.  **Design & Branding**:
-    *   The website uses the company's logo in the header and emails.
-    *   A **Dark/Light mode** toggle is available on the homepage and dashboards.
-    *   The Made with Emergent badge has been removed.
-10. **Static Pages**: About Us and Privacy Policy pages.
+In this session, the user requested a significant number of new features and reported several critical bugs related to a new custom domain deployment.
+
+**PRODUCT REQUIREMENTS (New/Updated in this session):**
+1.  **Password Recovery:** Implement Forgot Password and Reset Password functionality.
+2.  **Loan Amount Update:** Change all loan range text to ₦1M – ₦100M.
+3.  **Official Email:** Update the Contact Us email to .
+4.  **FAQ Page:** Add a new Frequently Asked Questions page.
+5.  **Admin Features:**
+    *   Allow admins to manually trigger or schedule reminder emails for users with pending payments.
+    *   Allow admins to change their own passwords from the dashboard.
+    *   Allow admins to preview user-uploaded documents directly in the dashboard.
+    *   Add a feature for admins to delete users and all their associated data.
+6.  **Form Fields:** Add Flat / House Number, Secondary Phone Number, and Relative’s Phone Number to the application form with 11-digit validation for phone numbers.
+7.  **Bug Fixes:**
+    *   Address a failed payment initiation from the user dashboard. (Completed)
+    *   Fix issues on the custom domain: webhook callbacks not working, new user data not appearing in the admin dashboard.
+    *   Fix a bug where a failed application submission still creates a user, locking them out from re-applying with the same email.
+8.  **Code Quality:** Conduct a full review of the entire codebase to identify and fix all errors, bugs, and inconsistencies.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a React frontend and a FastAPI backend.
--   **Frontend**: Implements the complete 5-step loan application form, user registration, login, an enhanced User Dashboard reflecting the complex loan statuses, a comprehensive Admin Dashboard, and Dark/Light mode functionality.
--   **Backend**: Features JWT authentication, a multi-status application management system, integration with Xixapay for virtual account payments, SendGrid for branded email notifications, and a scheduled background task for sending payment reminders.
+A full-stack application with a React frontend and a FastAPI backend. The application features a complete multi-step loan application, user/admin authentication, and dashboards. The Admin Dashboard is comprehensive, including statistics, user management (with deletion), application management, document previews, and a manual email reminder system. The backend integrates with Xixapay for payments and SendGrid for emails.
+
+However, the production deployment on the user's custom domain is out of sync with the current codebase, causing critical functions like payments and emails to fail.
 
 **Last working item**:
-    - Last item agent was working: The user reported that initiating a payment from the user dashboard resulted in a Failed to initiate payment error. The agent diagnosed the issue as an incorrect phone number format being sent to the Xixapay API. After fixing the formatting, the agent attempted to test the user login to verify the fix but found the login failed due to an unknown password. The agent has just reset the test user's password to  and is ready to re-attempt the login and test the payment button.
+    - Last item agent was working: The user requested a comprehensive review and refactoring of the entire codebase to fix all existing errors, bugs, and inconsistencies. The agent began this process by running linters, which identified numerous issues in both the frontend and backend. The agent had just started fixing these issues.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? manual testing by curl
+    - Which testing method agent to use? both
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  Verify the fix for the Pay Fee button on the user dashboard. (P0)
+  - Issue 1:  Complete the comprehensive code review and fix all identified bugs and linting errors. (P0)
+  - Issue 2:  The production environment (custom domain) is out of sync, causing critical features to fail. (P1)
+  - Issue 3:  The application submission flow, while improved, requires thorough testing to confirm its robustness. (P2)
 
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: The agent identified that the Xixapay API was rejecting requests due to phone numbers not being exactly 11 digits. A fix was implemented in  to format the phone number correctly. A temporary password for the test user  was set to  to allow for testing.
-     - Next debug checklist: 
-       1. Log in to the frontend as the test user  with the password .
-       2. Navigate to the user dashboard.
-       3. Click the Pay ₦2,500 Processing Fee button.
-       4. Verify that the user is redirected to the payment callback page showing the virtual account details, and that no error occurs.
-     - Why fix this issue and what will be achieved with the fix? This is a critical user-reported bug blocking the core functionality of the application. Fixing it will allow users to pay their pending fees from their dashboard.
+     - Attempted fixes: The agent ran  and , which revealed 3 backend issues and 21 frontend issues (errors/warnings). An initial fix was made to correct a hardcoded email in .
+     - Next debug checklist:
+        1. Address all remaining linting issues reported by the tools in  and .
+        2. Systematically review key logical flows: user registration, application submission (), and payment webhooks ().
+        3. Ensure all frontend components pass correct props and handle state updates without errors.
+     - Why fix this issue and what will be achieved with the fix? This directly addresses the user's request for a stable, production-ready application by improving code quality and eliminating hidden bugs.
      - Status:  IN PROGRESS
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? frontend
+     - Should Test frontend/backend/both after fix? both
      - Blocked on other issue: None
+  - Issue 2: 
+     - Attempted fixes: The agent correctly identified that the deployed version was using old  variables. The local  files were updated, and the agent added a debug endpoint () to confirm the discrepancy. The user was advised multiple times to redeploy.
+     - Next debug checklist: This issue is blocked until the user redeploys. After redeployment, the agent must:
+        1. Hit the  endpoint on the production domain to confirm the  and other variables are correct.
+        2. Perform an end-to-end test on the custom domain: register a new user, apply for a loan, initiate payment, and verify the status update in the admin dashboard.
+     - Why fix this issue and what will be achieved with the fix? This is the root cause of all user-reported problems on their live site. Fixing it will make the application functional for end-users.
+     - Status:  BLOCKED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: None. Blocked on user action (Redeployment).
+  - Issue 3: 
+     - Attempted fixes: The agent refactored the application creation endpoint () to handle cases where a logged-in user doesn't have an application and to attempt a user-creation rollback if the application part fails.
+     - Next debug checklist:
+        1. Manually test the failure scenario: attempt to submit an application with data that would cause a backend error and confirm the user is not permanently created or can try again without issue.
+        2. Test the success scenario for a freshly logged-in user who has no application.
+     - Why fix this issue and what will be achieved with the fix? It resolves a critical flaw in the user registration and application journey, preventing users from getting stuck.
+     - Status:  IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? backend
 
 **In progress Task List**:
-  - None.
+  - Task 1:  Comprehensive Code Review and Refactoring (P0)
+     - Where to resume: Continue fixing the linting errors identified in  and perform a manual review of the application's core logic.
+     - What will be achieved with this? A stable, robust, and high-quality codebase that is ready for production use.
+     - Status:  IN PROGRESS
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on something: None
 
 **Upcoming and Future Tasks**
-  - Task 1: Fully test the automated payment reminder email system to ensure it sends reminders correctly and stops sending them once a payment is made. (P1)
+    Upcoming Tasks:
+    - (P0) Full regression testing of the entire application after the code review and all bug fixes are complete.
+    - (P1) **Security Cleanup:** Remove the temporary and insecure debug endpoints from  (e.g., , , ). These should not exist in a production environment.
+    Future Tasks:
+    - Discuss and potentially implement server/system capacity upgrades if the user raises performance concerns in the future.
 
 **Completed work in this session**
-- **Payment Integration**:
-  - Successfully integrated Xixapay for payments, replacing a failed Nomba integration.
-  - Implemented the virtual account creation flow required by Xixapay.
-  - Fixed the webhook callback issue by using the public URL and adding the  to the API request.
-  - Resolved a  error from Xixapay by formatting the user's phone number to be exactly 11 digits.
-- **Feature Development**:
-  - Implemented a complex, multi-step loan application flow with a two-payment structure (processing fee and fixed deposit).
-  - Created a new Registration page and removed hardcoded demo accounts from the Login page.
-  - Built a comprehensive Admin Dashboard with statistics and management tabs for applications, users, and payments.
-  - Implemented a Dark/Light mode theme toggle across the site.
-  - Created a background job for sending automated payment reminders.
-  - Overhauled the User Dashboard UI for a more professional fintech appearance, showing detailed status and payment options.
-- **Email Integration**:
-  - Fixed SendGrid integration by resolving  and  errors (updated API key and used a verified sender email).
-  - Branded all outgoing emails with the company logo.
-- **Bug Fixes & UX Improvements**:
-  - Fixed a Maximum update depth exceeded infinite loop error in the loan application form.
-  - Removed the Made with Emergent badge from the website.
-  - Updated the website's HTML title and meta description.
+- **Feature Implementation:**
+  - Implemented a full Password Recovery (Forgot/Reset) feature.
+  - Added an FAQ page.
+  - Added an Admin Change Password feature.
+  - Added Admin-controlled manual email reminders and document previews.
+  - Implemented an Admin feature to delete users and their data.
+  - Added new fields to the loan application form.
+  - Updated loan amount text and contact email.
+- **Bug Fixes:**
+  - Verified the fix for the Pay Fee button from the previous session.
+  - Fixed the application submission flow to handle existing users and failed submissions more gracefully.
+  - Fixed hardcoded URLs in email templates.
+- **Deployment & Troubleshooting:**
+  - Diagnosed and explained the critical issue of the production deployment being out of sync with the preview environment.
+  - Updated all necessary  variables to use the user's custom domain.
+  - Created temporary debug endpoints to manage and diagnose the production database remotely, successfully cleaning up orphaned users and creating an admin account.
+  - Provided detailed guidance on how to deploy to Emergent with a custom domain and also on a Hostinger VPS.
 
 **Earlier issues found/mentioned but not fixed**
-   - None.
+   - The majority of linting issues found during the code review are still pending fixes. These are captured in the Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
   - None.
@@ -90,92 +115,82 @@ A full-stack application with a React frontend and a FastAPI backend.
 
 
 **Key Technical Concepts**
-- **Frontend**: React, React Router, React Hook Form, Axios, TailwindCSS,  for state management (Auth, Theme).
-- **Backend**: FastAPI, Pydantic, Motor (async MongoDB driver), JWT,  for scheduled tasks.
+- **Frontend**: React, React Router, Axios, TailwindCSS, .
+- **Backend**: FastAPI, Pydantic, Motor (async MongoDB driver), JWT, .
 - **Database**: MongoDB.
-- **Architecture**: Full-stack with REST API communication.
+- **Deployment**: The user has deployed to a custom domain on Emergent, but there is a synchronization issue between the preview and production environments.
 
 **key DB schema**
   - **users**: , , , , 
-  - **applications**: ,  (e.g., , , ), , , ,  (amount, duration, frequency), , , , , , .
+  - **applications**: , ,  (updated with new fields), , , ,  (document paths updated to be relative URLs), , , .
+  - **password_resets**: , , 
 
 **changes in tech stack**
   - None.
 
 **All files of reference**
-- : Contains the Xixapay integration logic, including the phone number formatting fix.
-- : Contains the UI for the user to track their status and initiate payments.
-- : Contains the user login logic.
-- : Defines the comprehensive application schema with all new fields.
-- : Manages the application state transitions.
-- : Contains the  setup for payment reminders.
-- : The comprehensive new admin panel.
-- : Logic for dark/light mode.
-- : Modified to remove scripts and change metadata.
-- : Modified to hide the Emergent badge.
+- : Contains newly added admin features and temporary debug endpoints that need removal.
+- : Core logic for application submission; was refactored to be more robust.
+- : Heavily modified to include new admin features (user deletion, reminders, document preview).
+-  & : Updated to reflect the custom domain, but changes are not yet live on production.
+- : Updated with password reset logic and corrected hardcoded URLs.
+- The entire codebase is relevant for the pending code review task.
 
 **Areas that need refactoring**:
-- None currently.
+- **Security:** The temporary debug endpoints in  are a major security risk and MUST be removed before the project is considered complete.
+- **Code Quality:** The entire project requires cleanup based on the 20+ linting issues identified across the frontend and backend.
 
 **key api endpoints**
-- : Submit a new loan application (also creates a user).
-- : Initiate a payment for an application (for processing or deposit fee).
-- : Webhook endpoint for Xixapay to send payment confirmations.
-- : (Admin) Get all users.
-- : (Admin) Get all applications.
-- : (Admin) Get all payment transactions.
-- : (Admin) Get dashboard summary statistics.
-- : (Manual) Trigger the payment reminder task for testing.
+- : Initiates the password reset process.
+- : Completes the password reset with a token.
+- : (Admin) Allows an admin to change their password.
+- : (Admin) Sends payment reminders to selected or all users.
+- : (Admin) Serves document details for preview.
+- : (Admin) Deletes a user and all their associated data.
+- : Serves static uploaded files (ID cards, passports).
+- : (Temporary) Debug endpoint to manage production data.
+- : (Temporary) Debug endpoint to check production environment variables.
 
 **Critical Info for New Agent**
-- The application logic is now complex, revolving around a multi-stage status flow. Refer to the  model for the definitive list of statuses.
-- There are two distinct payment points: a ₦2,500 processing fee and a ₦3,000 fixed deposit. The  payment endpoint handles both, depending on the application's current status.
-- To test the last reported bug, you must log in as a regular user. The password for the test user  has been reset to .
+- **The #1 priority is resolving the production deployment issue.** The user's custom domain is running outdated code with incorrect configurations, rendering most features non-functional. Any code fixes you implement will NOT work on the live site until the user **redeploys**. You must guide the user to do this after your fixes are complete.
+- Your immediate task is to finish the comprehensive code review requested by the user. Fix all the linting errors and any other bugs you find.
+- **Security Warning:** The previous agent added temporary, insecure endpoints to  to fix the production database. You should plan to remove these endpoints as an Upcoming Task and inform the user about it.
 
 **documents and test_reports created in this job**
-- 
+-  was updated.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  Try to initiate a pending payment fee or Fixed Deposit from the user dashboard it shows error message. Failed to initiate payment
-2.  The homepage shows:
-    - ✅ Logo in the header (top left)
-    - ✅ Dark mode toggle (moon icon) next to Login
-    - ✅ Clean professional design
-3.  The homepage shows:
-    - ✅ Logo in the header (top left)
-    - ✅ Dark mode toggle (moon icon) next to Login
-    - ✅ Clean professional design
-4.  Admin account created. Now let me test the email and take a screenshot to verify everything is working:
-5.  1. kdride6@gmail.com
-    2. djscan30Z@
-    3. Cashflow Mfb
-6.  Now let me create a script to add an admin user, and also restart the backend:
-7.  Now let me add the admin transactions endpoint and create an admin user. First, let me add the admin routes:
-8.  Now let me add dark mode CSS styles:
-9.  Now let me update the App.js to include ThemeProvider:
-10. Now let me update the Header component with logo and dark mode toggle:
+1.  Please review all the code across the entire project scope, including: 1. Frontend code, 2. User Dashboard code, 3. Admin Dashboard code. Identify and fix all existing errors, bugs, and inconsistencies. Update and refactor the code where necessary to ensure the system works properly and functions exactly as intended.
+2.  After filling out the form and submitting the information, an error message with a code is displayed. When I try to resubmit the form, the system says that the email address has already been used. If I then log in with the same email address, I am redirected to the loan application page, but when I try to apply for the loan after filling in the information, the system again says that the email address has already been used. Please check all this and move everything to my custom domain
+3.  All Payment and email activities not sending working or working
+4.  Call Deployer Agent and Run Health Check to Check for Readiness for Deployment
+5.  Please kindly check the webhook. I just made a successful payment, but the webhook did not return a successful callback response. The payment was made through my custom domain.
+6.  Admin Dashboard – User Data Deletion Feature. Add a feature in the Admin Dashboard that allows the admin to delete a user’s information and data from the server.
+7.  delete all users except admin
+8.  yes
+9.  i have redeploy run a delete script and list all the previous emails on the linked custom domain
+10. yes. delete email from the server billdennis750@gmail.com
 
 **Project Health Check:**
-- **Broken**: The payment initiation from the user dashboard was broken. A fix has been implemented but requires verification.
+- **Broken**: The production environment on the user's custom domain is non-functional due to being out of sync with the latest code and correct configuration. Core features like payments, emails, and data consistency are failing.
 - **Mocked**: None.
 
 **3rd Party Integrations**
-- **Xixapay** (Payments): Implemented. Requires User API Key.
-- **SendGrid** (Emails): Implemented. Requires User API Key.
+- **Xixapay** (Payments) — requires User API Key.
+- **SendGrid** (Emails) — requires User API Key.
 
 **Testing status**
   - Testing agent used after significant changes: YES
-  - Troubleshoot agent used after agent stuck in loop: NO
+  - Troubleshoot agent used after agent stuck in loop: YES (Deployment agent was used)
   - Test files created: []
-  - Known regressions: None.
+  - Known regressions: The production deployment on the custom domain has severely regressed because it is running an old, misconfigured version of the application.
 
 **Credentials to test flow:**
--   **Admin User**:
+- **Admin User**:
     *   Email: 
     *   Password: 
--   **Test User**:
-    *   Email: 
-    *   Password:  (temporarily reset for testing)
+- **Test Users**: All non-admin users were deleted from both preview and production databases. You will need to create new test users.
 
 **What agent forgot to execute**
-- Nothing was forgotten. The agent systematically addressed a long list of feature requests and bug fixes. The current task is the logical next step in resolving the user's latest bug report.</analysis>
+- The agent did not complete the comprehensive code review and bug-fixing task initiated at the user's request. Numerous linting errors remain unresolved.
+- The agent did not create a plan to remove the temporary and insecure debug endpoints from the production codebase, which is a critical security step.</analysis>

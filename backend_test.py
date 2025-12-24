@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.append('/app/backend')
 
 # Test configuration
-BACKEND_URL = "https://lendflow-hub.preview.emergentagent.com"
+BACKEND_URL = "https://cashflow-dashboard-5.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class XixapayPaymentTester:
