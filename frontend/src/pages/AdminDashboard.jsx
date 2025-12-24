@@ -16,7 +16,8 @@ import {
   LogOut, Users, FileText, CreditCard, Activity, 
   Search, CheckCircle, Clock, XCircle, Eye, 
   DollarSign, TrendingUp, UserCheck, AlertCircle,
-  Download, RefreshCw, ChevronDown, ChevronUp
+  Download, RefreshCw, ChevronDown, ChevronUp, Settings,
+  Lock, Mail as MailIcon
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
