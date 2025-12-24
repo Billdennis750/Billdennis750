@@ -590,21 +590,34 @@ const AdminDashboard = () => {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="mt-4 flex gap-2">
+                                  <div className="mt-4 flex gap-2 flex-wrap">
                                     {app.status === 'under_review' && (
                                       <>
                                         <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(app.application_id, 'approved')}>
-                                          <CheckCircle className="w-4 h-4 mr-1" /> Approve
+                                          <CheckCircle className="w-4 h-4 mr-1" /> Approve Application
                                         </Button>
                                         <Button size="sm" variant="destructive" onClick={() => handleStatusUpdate(app.application_id, 'rejected', 'Application did not meet requirements')}>
-                                          <XCircle className="w-4 h-4 mr-1" /> Reject
+                                          <XCircle className="w-4 h-4 mr-1" /> Reject Application
                                         </Button>
                                       </>
                                     )}
                                     {app.status === 'deposit_paid' && (
-                                      <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(app.application_id, 'disbursed')}>
-                                        <DollarSign className="w-4 h-4 mr-1" /> Mark as Disbursed
-                                      </Button>
+                                      <>
+                                        <Button 
+                                          size="sm" 
+                                          className="bg-green-600 hover:bg-green-700" 
+                                          onClick={() => handleDisbursementDecision(app.application_id, 'approve')}
+                                        >
+                                          <DollarSign className="w-4 h-4 mr-1" /> Approve Disbursement
+                                        </Button>
+                                        <Button 
+                                          size="sm" 
+                                          variant="destructive" 
+                                          onClick={() => handleDisbursementDecision(app.application_id, 'decline')}
+                                        >
+                                          <XCircle className="w-4 h-4 mr-1" /> Decline Disbursement
+                                        </Button>
+                                      </>
                                     )}
                                   </div>
                                 </td>
