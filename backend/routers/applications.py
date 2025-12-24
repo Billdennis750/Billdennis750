@@ -212,7 +212,7 @@ async def submit_application(
                 pass
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit application. Please try again or contact support."
+            detail="Failed to submit application. Please try again or contact support."
         )
 
 @router.get("/user/my-applications", response_model=dict)
