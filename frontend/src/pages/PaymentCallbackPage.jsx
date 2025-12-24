@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -11,15 +11,34 @@ const API = `${BACKEND_URL}/api`;
 
 const PaymentCallbackPage = () => {
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState('loading');
-  const [paymentData, setPaymentData] = useState(null);
-  const [pollCount, setPollCount] = useState(0);
-
+  
   // Check if this is a bank transfer payment
   const paymentType = searchParams.get('type');
   const accountNumber = searchParams.get('account');
   const bankName = searchParams.get('bank');
   const amount = searchParams.get('amount');
+  
+  // Calculate initial state based on URL params
+  const initialState = useMemo(() => {
+    if (paymentType === 'bank_transfer' && accountNumber) {
+      return {
+        status: 'bank_transfer',
+        paymentData: {
+          orderRef: searchParams.get('orderRef'),
+          amount: parseInt(amount) || 2500,
+          virtualAccount: {
+            account_number: accountNumber,
+            bank_name: decodeURIComponent(bankName || 'Partner Bank')
+          }
+        }
+      };
+    }
+    return { status: 'loading', paymentData: null };
+  }, [paymentType, accountNumber, bankName, amount, searchParams]);
+
+  const [status, setStatus] = useState(initialState.status);
+  const [paymentData, setPaymentData] = useState(initialState.paymentData);
+  const [pollCount, setPollCount] = useState(0);
 
   const verifyPayment = useCallback(async () => {
     try {
@@ -62,21 +81,11 @@ const PaymentCallbackPage = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    // If it's a bank transfer, show instructions first
-    if (paymentType === 'bank_transfer' && accountNumber) {
-      setStatus('bank_transfer');
-      setPaymentData({
-        orderRef: searchParams.get('orderRef'),
-        amount: parseInt(amount) || 2500,
-        virtualAccount: {
-          account_number: accountNumber,
-          bank_name: decodeURIComponent(bankName || 'Partner Bank')
-        }
-      });
-    } else {
+    // Only verify payment if not a bank transfer (bank transfer state is set via useMemo)
+    if (!(paymentType === 'bank_transfer' && accountNumber)) {
       verifyPayment();
     }
-  }, [paymentType, accountNumber, bankName, amount, searchParams, verifyPayment]);
+  }, [paymentType, accountNumber, verifyPayment]);
 
   // Poll for payment status when showing bank transfer instructions
   useEffect(() => {
