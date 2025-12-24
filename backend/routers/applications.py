@@ -203,9 +203,16 @@ async def submit_application(
         raise
     except Exception as e:
         logger.error(f"Application submission error: {str(e)}")
+        # Clean up on failure - remove uploaded files if they exist
+        if app_upload_dir and os.path.exists(app_upload_dir):
+            try:
+                import shutil
+                shutil.rmtree(app_upload_dir)
+            except:
+                pass
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit application: {str(e)}"
+            detail=f"Failed to submit application. Please try again or contact support."
         )
 
 @router.get("/user/my-applications", response_model=dict)
