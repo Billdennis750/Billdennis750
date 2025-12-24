@@ -310,11 +310,18 @@ const HomePage = () => {
             handling urgent needs, or securing new opportunities, Cashflow MFB is ready
             to back you with fast, reliable, no-collateral financing.
           </p>
-          <Link to="/apply">
-            <button className="btn-primary">
-              Start Your Application <ArrowRight className="w-5 h-5 ml-2 inline" />
-            </button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/apply">
+              <button className="btn-primary">
+                Start Your Application <ArrowRight className="w-5 h-5 ml-2 inline" />
+              </button>
+            </Link>
+            <Link to="/faq">
+              <button className="btn-secondary">
+                View FAQ
+              </button>
+            </Link>
+          </div>
         </div>
       </section>
 
