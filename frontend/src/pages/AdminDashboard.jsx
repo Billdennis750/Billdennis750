@@ -274,6 +274,54 @@ const AdminDashboard = () => {
     link.click();
   };
 
+  // User Delete Functions
+  const handleViewUserDetails = async (userEmail) => {
+    setLoadingUserDetails(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/admin/users/${encodeURIComponent(userEmail)}/details`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserDetails(response.data);
+      setUserToDelete(userEmail);
+      setShowDeleteModal(true);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to get user details');
+    } finally {
+      setLoadingUserDetails(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    setDeletingUser(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.delete(`${API}/admin/users/${encodeURIComponent(userToDelete)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success(response.data.message);
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      setUserDetails(null);
+      
+      // Refresh data
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete user');
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+    setUserDetails(null);
+  };
+
   const filteredApps = applications.filter(app => {
     const matchesSearch = 
       app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
