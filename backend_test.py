@@ -225,27 +225,55 @@ class DisbursementWorkflowTester:
             return False
     
     async def simulate_processing_fee_payment(self):
-        """Simulate processing fee payment via webhook"""
+        """Simulate processing fee payment via payment initiation and webhook"""
         try:
-            webhook_payload = {
-                "externalReference": f"CASHFLOW-{self.test_application_id}-{int(datetime.now().timestamp())}",
-                "notification_status": "payment_successful",
-                "transaction_id": f"TXN_PROC_{int(datetime.now().timestamp())}",
+            # First initiate payment to create transaction record
+            payment_payload = {
+                "application_id": self.test_application_id,
+                "customer_email": "jane.smith.test@example.com",
+                "customer_name": "Jane Smith",
+                "customer_phone": "08087654321",
                 "amount": 2500,
-                "amount_paid": 2500
+                "redirect_url": f"{BACKEND_URL}/payment-callback"
             }
             
             response = await self.client.post(
-                f"{API_BASE}/payments/webhook",
-                json=webhook_payload,
+                f"{API_BASE}/payments/initiate",
+                json=payment_payload,
                 headers={"Content-Type": "application/json"}
             )
             
             if response.status_code == 200:
-                await self.log_result("Simulate Processing Fee Payment", True, "Processing fee payment simulated")
-                return True
+                data = response.json()
+                order_reference = data.get("order_reference")
+                
+                if order_reference:
+                    # Now send webhook for successful payment
+                    webhook_payload = {
+                        "externalReference": order_reference,
+                        "notification_status": "payment_successful",
+                        "transaction_id": f"TXN_PROC_{int(datetime.now().timestamp())}",
+                        "amount": 2500,
+                        "amount_paid": 2500
+                    }
+                    
+                    webhook_response = await self.client.post(
+                        f"{API_BASE}/payments/webhook",
+                        json=webhook_payload,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    
+                    if webhook_response.status_code == 200:
+                        await self.log_result("Simulate Processing Fee Payment", True, "Processing fee payment simulated")
+                        return True
+                    else:
+                        await self.log_result("Simulate Processing Fee Payment", False, f"Webhook failed: {webhook_response.status_code}")
+                        return False
+                else:
+                    await self.log_result("Simulate Processing Fee Payment", False, "No order reference from payment initiation")
+                    return False
             else:
-                await self.log_result("Simulate Processing Fee Payment", False, f"Failed: {response.status_code}")
+                await self.log_result("Simulate Processing Fee Payment", False, f"Payment initiation failed: {response.status_code}")
                 return False
                 
         except Exception as e:
