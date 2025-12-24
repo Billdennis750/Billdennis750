@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # Logo URL for emails
 LOGO_URL = "https://customer-assets.emergentagent.com/job_microfin-portal/artifacts/yv8s58dq_1000315618-removebg-preview.png"
-WEBSITE_URL = "https://microfin-portal.preview.emergentagent.com"
+WEBSITE_URL = "https://lendflow-hub.preview.emergentagent.com"
 
 class EmailService:
     def __init__(self):
