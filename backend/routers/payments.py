@@ -441,29 +441,66 @@ async def xixapay_webhook(request: Request, db=Depends(get_db)):
         # Update application if payment successful
         if payment_status == "completed":
             application_id = transaction["application_id"]
-            await db.applications.update_one(
-                {"application_id": application_id},
-                {"$set": {
-                    "payment_status": "paid",
-                    "status": "under_review",
-                    "updated_at": datetime.now(timezone.utc)
-                }}
-            )
-            
-            logger.info(f"Application {application_id} marked as paid via webhook")
-            
-            # Send email notification
             application = await db.applications.find_one({"application_id": application_id})
+            
             if application:
-                try:
-                    await email_service.send_application_received(
-                        application.get("email"),
-                        application.get("full_name"),
-                        application_id,
-                        application.get("loan_amount")
+                # Determine payment type based on amount
+                amount = transaction.get("amount", 0)
+                is_processing_fee = amount <= 2500
+                is_deposit = amount >= 3000
+                
+                app_update = {
+                    "updated_at": datetime.now(timezone.utc)
+                }
+                
+                # Processing fee payment (₦2,500)
+                if is_processing_fee and not application.get("processing_fee_paid"):
+                    app_update["processing_fee_paid"] = True
+                    app_update["processing_fee_paid_at"] = datetime.now(timezone.utc)
+                    app_update["payment_status"] = "paid"
+                    app_update["status"] = "under_review"
+                    
+                    logger.info(f"Application {application_id} - Processing fee marked as paid")
+                    
+                    # Send payment confirmation email
+                    try:
+                        await email_service.send_payment_confirmation(
+                            application.get("email"),
+                            application.get("full_name"),
+                            amount,
+                            "processing_fee",
+                            transaction_id or order_ref,
+                            application_id
+                        )
+                    except Exception as email_error:
+                        logger.error(f"Failed to send processing fee email: {email_error}")
+                
+                # Deposit payment (₦3,000)
+                elif is_deposit and not application.get("deposit_paid") and application.get("status") == "approved":
+                    app_update["deposit_paid"] = True
+                    app_update["deposit_paid_at"] = datetime.now(timezone.utc)
+                    app_update["status"] = "deposit_paid"
+                    # Disbursement status remains pending until admin approves
+                    app_update["disbursement_status"] = "pending"
+                    
+                    logger.info(f"Application {application_id} - Deposit marked as paid, awaiting disbursement approval")
+                    
+                    # Send deposit confirmation email
+                    try:
+                        await email_service.send_deposit_confirmed(
+                            application.get("email"),
+                            application.get("full_name"),
+                            application_id,
+                            application.get("approved_amount") or application.get("loan_amount")
+                        )
+                    except Exception as email_error:
+                        logger.error(f"Failed to send deposit email: {email_error}")
+                
+                if app_update:
+                    await db.applications.update_one(
+                        {"application_id": application_id},
+                        {"$set": app_update}
                     )
-                except Exception as email_error:
-                    logger.error(f"Failed to send email notification: {email_error}")
         
         return {"status": "success", "message": "Webhook processed"}
         
