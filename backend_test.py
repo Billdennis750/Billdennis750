@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Cashflow MFB - Xixapay Payment Integration
-Tests payment initiation, verification, and webhook handling
+Backend API Testing for Cashflow MFB - Payment Status Update & Loan Disbursement Workflow
+Tests new disbursement decision endpoint, payment webhook handling, and admin features
 """
 
 import asyncio
@@ -19,7 +19,11 @@ sys.path.append('/app/backend')
 BACKEND_URL = "https://cashflow-dashboard-5.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
-class XixapayPaymentTester:
+# Admin credentials for testing
+ADMIN_EMAIL = "kdride6@gmail.com"
+ADMIN_PASSWORD = "djscan30Z@"
+
+class DisbursementWorkflowTester:
     def __init__(self):
         self.client = httpx.AsyncClient(timeout=30.0)
         self.test_results = []
