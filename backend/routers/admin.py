@@ -17,6 +17,126 @@ class SendReminderRequest(BaseModel):
     reminder_type: str = "all"  # "processing_fee", "deposit", or "all"
     custom_message: Optional[str] = None
 
+class DisbursementDecisionRequest(BaseModel):
+    decision: str  # "approve" or "decline"
+    reason: Optional[str] = None
+
+
+@router.post("/applications/{application_id}/disbursement", response_model=dict)
+async def process_disbursement_decision(
+    application_id: str,
+    request: DisbursementDecisionRequest,
+    token_data=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """
+    Process loan disbursement decision (Admin only).
+    - Approve: Marks loan as disbursed and sends notification to user
+    - Decline: Rejects disbursement and notifies user
+    """
+    try:
+        # Verify admin role
+        admin = await db.users.find_one({"email": token_data.email})
+        if not admin or admin.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Find application
+        application = await db.applications.find_one({"application_id": application_id})
+        if not application:
+            raise HTTPException(status_code=404, detail="Application not found")
+        
+        # Verify application is in deposit_paid status (ready for disbursement)
+        if application.get("status") != "deposit_paid":
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Application must be in 'deposit_paid' status. Current status: {application.get('status')}"
+            )
+        
+        update_data = {
+            "updated_at": datetime.now(timezone.utc),
+            "disbursement_decision_by": token_data.email,
+            "disbursement_decision_at": datetime.now(timezone.utc)
+        }
+        
+        if request.decision == "approve":
+            # Generate repayment schedule
+            from routers.applications import generate_repayment_schedule
+            repayment_schedule = generate_repayment_schedule(
+                application.get("approved_amount") or application.get("loan_amount"),
+                application.get("repayment_duration"),
+                application.get("repayment_frequency")
+            )
+            
+            update_data["status"] = "disbursed"
+            update_data["disbursement_status"] = "approved"
+            update_data["disbursed"] = True
+            update_data["disbursed_at"] = datetime.now(timezone.utc)
+            update_data["outstanding_balance"] = application.get("total_repayment", application.get("loan_amount"))
+            update_data["repayment_schedule"] = repayment_schedule
+            if repayment_schedule:
+                update_data["next_repayment_date"] = repayment_schedule[0]["due_date"]
+                update_data["next_repayment_amount"] = repayment_schedule[0]["amount"]
+            
+            # Send disbursement email
+            try:
+                await email_service.send_loan_disbursed(
+                    application.get("email"),
+                    application.get("full_name"),
+                    application_id,
+                    application.get("approved_amount") or application.get("loan_amount"),
+                    application.get("bank_name"),
+                    application.get("account_number"),
+                    repayment_schedule
+                )
+            except Exception as email_error:
+                logger.error(f"Failed to send disbursement email: {email_error}")
+            
+            logger.info(f"Admin {token_data.email} approved disbursement for {application_id}")
+            message = "Loan disbursement approved. User has been notified."
+            
+        elif request.decision == "decline":
+            update_data["status"] = "disbursement_declined"
+            update_data["disbursement_status"] = "declined"
+            update_data["disbursement_decline_reason"] = request.reason or "Disbursement declined by admin"
+            
+            # Send decline email
+            try:
+                await email_service.send_disbursement_declined(
+                    application.get("email"),
+                    application.get("full_name"),
+                    application_id,
+                    request.reason or "Your loan disbursement has been declined. Please contact support for more information."
+                )
+            except Exception as email_error:
+                logger.error(f"Failed to send disbursement declined email: {email_error}")
+            
+            logger.info(f"Admin {token_data.email} declined disbursement for {application_id}: {request.reason}")
+            message = "Loan disbursement declined. User has been notified."
+            
+        else:
+            raise HTTPException(status_code=400, detail="Invalid decision. Use 'approve' or 'decline'")
+        
+        await db.applications.update_one(
+            {"application_id": application_id},
+            {"$set": update_data}
+        )
+        
+        return {
+            "message": message,
+            "application_id": application_id,
+            "decision": request.decision,
+            "status": update_data["status"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Disbursement decision error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process disbursement decision"
+        )
+
 
 @router.delete("/users/{email}", response_model=dict)
 async def admin_delete_user(email: str, token_data=Depends(get_current_user), db=Depends(get_db)):
