@@ -1,6 +1,6 @@
 {
   "summary": {
-    "passed": 4,
+    "passed": 3,
     "total": 7
   },
   "results": [
@@ -9,49 +9,49 @@
       "success": true,
       "message": "Backend is running",
       "details": null,
-      "timestamp": "2025-12-23T20:00:44.991271"
+      "timestamp": "2025-12-24T16:27:09.896813"
     },
     {
       "test": "Create Test Application",
-      "success": true,
-      "message": "Application created: LOAN-2025-003",
-      "details": null,
-      "timestamp": "2025-12-23T20:00:45.015719"
+      "success": false,
+      "message": "Failed to create application: 422",
+      "details": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"relative_phone\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"flat_house_number\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"bank_name\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"account_name\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"account_number\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"repayment_duration\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"repayment_frequency\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"password\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"}]}",
+      "timestamp": "2025-12-24T16:27:09.947420"
     },
     {
       "test": "Payment Initiation",
       "success": false,
-      "message": "API returned 521",
-      "details": "{\"detail\":\"Payment gateway error: Xixapay API returned 404\"}",
-      "timestamp": "2025-12-23T20:00:45.380001"
+      "message": "No test application available",
+      "details": null,
+      "timestamp": "2025-12-24T16:27:09.947449"
     },
     {
       "test": "Payment Verification",
       "success": false,
       "message": "No order reference available",
       "details": null,
-      "timestamp": "2025-12-23T20:00:45.380036"
+      "timestamp": "2025-12-24T16:27:09.947454"
     },
     {
       "test": "Webhook Handler",
       "success": false,
       "message": "No order reference available",
       "details": null,
-      "timestamp": "2025-12-23T20:00:45.380041"
+      "timestamp": "2025-12-24T16:27:09.947458"
     },
     {
       "test": "Invalid Application Payment",
       "success": true,
       "message": "Correctly rejected invalid application ID",
       "details": null,
-      "timestamp": "2025-12-23T20:00:45.395792"
+      "timestamp": "2025-12-24T16:27:09.958237"
     },
     {
       "test": "Invalid Order Verification",
       "success": true,
       "message": "Correctly rejected invalid order reference",
       "details": null,
-      "timestamp": "2025-12-23T20:00:45.403702"
+      "timestamp": "2025-12-24T16:27:09.969612"
     }
   ]
 }
