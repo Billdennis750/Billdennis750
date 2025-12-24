@@ -183,6 +183,90 @@ const AdminDashboard = () => {
     }
   };
 
+  // Email Reminder Functions
+  const handleSelectUserForReminder = (email) => {
+    setSelectedUsersForReminder(prev => 
+      prev.includes(email) 
+        ? prev.filter(e => e !== email)
+        : [...prev, email]
+    );
+  };
+
+  const handleSelectAllForReminder = () => {
+    const pendingUsers = applications
+      .filter(app => !app.processing_fee_paid || (app.status === 'approved' && !app.deposit_paid))
+      .map(app => app.email);
+    
+    if (selectedUsersForReminder.length === pendingUsers.length) {
+      setSelectedUsersForReminder([]);
+    } else {
+      setSelectedUsersForReminder(pendingUsers);
+    }
+  };
+
+  const handleSendReminders = async () => {
+    if (selectedUsersForReminder.length === 0) {
+      toast.error('Please select at least one user');
+      return;
+    }
+    
+    setSendingReminders(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/admin/send-reminders`, {
+        user_emails: selectedUsersForReminder,
+        reminder_type: reminderType
+      }, { headers: { Authorization: `Bearer ${token}` }});
+      
+      toast.success(response.data.message);
+      setSelectedUsersForReminder([]);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send reminders');
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
+  const handleSendReminderToAll = async () => {
+    setSendingReminders(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/admin/send-reminder-all`, {}, 
+        { headers: { Authorization: `Bearer ${token}` }});
+      
+      toast.success(response.data.message);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send reminders');
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
+  // Document Preview Functions
+  const handleViewDocument = (docUrl, docType, applicantName) => {
+    if (!docUrl) {
+      toast.error(`No ${docType} document uploaded`);
+      return;
+    }
+    setDocumentPreview({
+      url: `${BACKEND_URL}${docUrl}`,
+      type: docType,
+      applicantName: applicantName
+    });
+    setShowDocumentModal(true);
+  };
+
+  const handleDownloadDocument = (docUrl, docType, applicantName) => {
+    if (!docUrl) {
+      toast.error(`No ${docType} document uploaded`);
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = `${BACKEND_URL}${docUrl}`;
+    link.download = `${applicantName}_${docType}`;
+    link.click();
+  };
+
   const filteredApps = applications.filter(app => {
     const matchesSearch = 
       app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
