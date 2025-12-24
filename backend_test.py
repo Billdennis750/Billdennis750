@@ -45,7 +45,45 @@ class DisbursementWorkflowTester:
         if details:
             print(f"   Details: {details}")
     
-    async def test_health_check(self):
+    async def admin_login(self):
+        """Login as admin to get authentication token"""
+        try:
+            login_payload = {
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PASSWORD
+            }
+            
+            response = await self.client.post(
+                f"{API_BASE}/auth/login",
+                json=login_payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.admin_token = data.get("access_token")
+                if self.admin_token:
+                    await self.log_result("Admin Login", True, f"Admin logged in successfully")
+                    return True
+                else:
+                    await self.log_result("Admin Login", False, "No access token in response")
+                    return False
+            else:
+                await self.log_result("Admin Login", False, f"Login failed: {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            await self.log_result("Admin Login", False, f"Login error: {str(e)}")
+            return False
+    
+    def get_admin_headers(self):
+        """Get headers with admin authentication"""
+        if not self.admin_token:
+            return {"Content-Type": "application/json"}
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.admin_token}"
+        }
         """Test if backend is running"""
         try:
             response = await self.client.get(f"{API_BASE}/health")
