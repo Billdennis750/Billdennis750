@@ -50,6 +50,62 @@ const AboutUsPage = () => {
             </div>
           </section>
 
+          {/* CBN Licensed Section */}
+          <section className="bg-white rounded-lg shadow-sm p-8 mb-8 overflow-hidden">
+            <div className="flex items-center justify-center mb-6">
+              <Shield className="w-10 h-10 mr-3" style={{ color: 'var(--accent-text)' }} />
+              <h2 className="heading-2">Licensed by the Central Bank of Nigeria</h2>
+            </div>
+            
+            <div className="text-center mb-8">
+              <p className="body-large" style={{ color: 'var(--text-body)' }}>
+                Cashflow MFB is a fully regulated microfinance bank, committed to transparent, fast, and reliable loan services you can trust.
+              </p>
+            </div>
+
+            {/* Image Gallery */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* License Ceremony Image */}
+              <div className="rounded-xl overflow-hidden shadow-lg">
+                <img 
+                  src="https://customer-assets.emergentagent.com/job_cashflow-dashboard-5/artifacts/twilljin_WhatsApp%20Image%202025-12-27%20at%2013.41.20_5e878e62.jpg" 
+                  alt="Cashflow MFB CBN License Issuance Ceremony" 
+                  className="w-full h-64 object-cover"
+                />
+                <div className="p-4" style={{ background: 'var(--accent-wash)' }}>
+                  <p className="body-small font-semibold text-center" style={{ color: 'var(--accent-text)' }}>
+                    CBN Loan Company License Issuance Ceremony
+                  </p>
+                </div>
+              </div>
+
+              {/* Office Building Image */}
+              <div className="rounded-xl overflow-hidden shadow-lg">
+                <img 
+                  src="https://customer-assets.emergentagent.com/job_cashflow-dashboard-5/artifacts/zvynrvv9_WhatsApp%20Image%202025-12-27%20at%2013.41.20_7d09b980.jpg" 
+                  alt="Cashflow MFB Headquarters" 
+                  className="w-full h-64 object-cover"
+                />
+                <div className="p-4" style={{ background: 'var(--accent-wash)' }}>
+                  <p className="body-small font-semibold text-center" style={{ color: 'var(--accent-text)' }}>
+                    Cashflow MFB Headquarters - Licensed by CBN
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Trust Badge */}
+            <div className="mt-8 p-6 rounded-xl text-center" style={{ background: 'linear-gradient(135deg, var(--accent-wash) 0%, #e8f5e9 100%)', border: '2px solid var(--accent-text)' }}>
+              <div className="flex items-center justify-center mb-3">
+                <CheckCircle className="w-6 h-6 mr-2" style={{ color: 'var(--accent-text)' }} />
+                <span className="heading-3" style={{ color: 'var(--accent-text)' }}>Fully Regulated & Compliant</span>
+              </div>
+              <p className="body-medium" style={{ color: 'var(--text-body)' }}>
+                Your financial security is our priority. We operate under the strict regulations and guidelines of the Central Bank of Nigeria (CBN).
+              </p>
+            </div>
+          </section>
+
           {/* What We Do */}
           <section className="bg-white rounded-lg shadow-sm p-8 mb-8">
             <h2 className="heading-2 mb-6">What We Do</h2>
