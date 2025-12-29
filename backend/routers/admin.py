@@ -186,6 +186,54 @@ async def admin_delete_user(email: str, token_data=Depends(get_current_user), db
             detail="Failed to delete user"
         )
 
+@router.post("/cleanup-orphaned-users", response_model=dict)
+async def cleanup_orphaned_users(token_data=Depends(get_current_user), db=Depends(get_db)):
+    """
+    Clean up orphaned users (users without any applications).
+    These are typically created when application submission fails after user creation.
+    Admin only endpoint.
+    """
+    try:
+        # Verify admin role
+        admin = await db.users.find_one({"email": token_data.email})
+        if not admin or admin.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        # Get all non-admin users
+        all_users = await db.users.find(
+            {"role": {"$ne": "admin"}},
+            {"email": 1}
+        ).to_list(1000)
+        
+        orphaned_users = []
+        cleaned_up = []
+        
+        for user in all_users:
+            user_email = user.get("email")
+            # Check if user has any applications
+            app = await db.applications.find_one({"email": user_email})
+            if not app:
+                orphaned_users.append(user_email)
+                # Delete the orphaned user
+                await db.users.delete_one({"email": user_email})
+                cleaned_up.append(user_email)
+                logger.info(f"Deleted orphaned user: {user_email}")
+        
+        return {
+            "message": f"Cleaned up {len(cleaned_up)} orphaned users",
+            "orphaned_users_deleted": cleaned_up,
+            "total_checked": len(all_users)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cleanup orphaned users error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to cleanup orphaned users"
+        )
+
 @router.get("/users/{email}/details", response_model=dict)
 async def get_user_details(email: str, token_data=Depends(get_current_user), db=Depends(get_db)):
     """Get detailed information about a user (Admin only)"""
