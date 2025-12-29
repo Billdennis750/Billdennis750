@@ -202,7 +202,9 @@ async def submit_application(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Application submission error: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Application submission error: {error_msg}")
+        
         # Clean up on failure - remove uploaded files if they exist
         if app_upload_dir and os.path.exists(app_upload_dir):
             try:
@@ -210,10 +212,37 @@ async def submit_application(
                 shutil.rmtree(app_upload_dir)
             except Exception:
                 pass
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to submit application. Please try again or contact support."
-        )
+        
+        # Try to rollback user creation if it was a new user
+        if user_id and not existing_user:
+            try:
+                from bson import ObjectId
+                await db.users.delete_one({"_id": ObjectId(user_id)})
+                logger.info(f"Rolled back user creation for {email}")
+            except Exception as rollback_error:
+                logger.error(f"Failed to rollback user: {rollback_error}")
+        
+        # Provide more specific error messages
+        if "date_of_birth" in error_msg.lower() or "datetime" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid date format. Please use YYYY-MM-DD format for date of birth."
+            )
+        elif "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This email is already registered. Please login or use a different email."
+            )
+        elif "file" in error_msg.lower() or "upload" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File upload failed. Please ensure your files are valid images (JPG, PNG) and try again."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to submit application. Please try again or contact support at payment@cashflowsmfb.com"
+            )
 
 @router.get("/user/my-applications", response_model=dict)
 async def get_user_applications(token_data=Depends(get_current_user), db=Depends(get_db)):
