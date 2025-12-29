@@ -11,14 +11,23 @@ from config import get_settings
 import os
 import aiofiles
 import logging
+import traceback
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
+# Store last application errors for debugging
+application_errors = []
+
 # Ensure upload directory exists
 os.makedirs(settings.upload_dir, exist_ok=True)
+
+@router.get("/debug/last-application-errors")
+async def get_application_errors():
+    """Get the last application submission errors"""
+    return {"errors": application_errors}
 
 @router.post("/submit", response_model=dict)
 async def submit_application(
