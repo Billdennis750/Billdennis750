@@ -202,12 +202,36 @@ async def submit_application(
                     raise user_create_error
         
         # Create application document
+        # Parse date of birth with multiple format support
+        try:
+            if 'T' in date_of_birth:
+                # ISO format with time
+                dob = datetime.fromisoformat(date_of_birth.replace('Z', '+00:00'))
+            elif '-' in date_of_birth:
+                # YYYY-MM-DD format
+                dob = datetime.strptime(date_of_birth, '%Y-%m-%d')
+            elif '/' in date_of_birth:
+                # DD/MM/YYYY or MM/DD/YYYY format
+                try:
+                    dob = datetime.strptime(date_of_birth, '%d/%m/%Y')
+                except ValueError:
+                    dob = datetime.strptime(date_of_birth, '%m/%d/%Y')
+            else:
+                dob = datetime.fromisoformat(date_of_birth)
+            logger.info(f"Parsed date of birth: {dob}")
+        except Exception as date_error:
+            logger.error(f"Date parsing error for '{date_of_birth}': {date_error}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid date format: {date_of_birth}. Please use YYYY-MM-DD format."
+            )
+        
         application_doc = {
             "application_id": application_id,
             "user_id": user_id,
             # Personal Information
             "full_name": full_name,
-            "date_of_birth": datetime.fromisoformat(date_of_birth),
+            "date_of_birth": dob,
             "email": email,
             "phone": phone,
             "secondary_phone": secondary_phone,
