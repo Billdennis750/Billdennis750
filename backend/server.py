@@ -145,6 +145,60 @@ async def health_check():
         "version": "1.0.0"
     }
 
+@app.post("/api/debug/test-file-upload")
+async def test_file_upload(
+    test_file: UploadFile = File(...)
+):
+    """Test endpoint for file upload debugging"""
+    import os
+    import aiofiles
+    from config import get_settings
+    
+    settings = get_settings()
+    results = {
+        "filename": test_file.filename,
+        "content_type": test_file.content_type,
+        "steps": []
+    }
+    
+    try:
+        # Step 1: Read file content
+        content = await test_file.read()
+        results["steps"].append(f"1. Read file: {len(content)} bytes")
+        results["file_size"] = len(content)
+        
+        # Step 2: Create test directory
+        test_dir = os.path.join(settings.upload_dir, "TEST-DEBUG")
+        os.makedirs(test_dir, exist_ok=True)
+        results["steps"].append(f"2. Created directory: {test_dir}")
+        
+        # Step 3: Write file using aiofiles
+        test_path = os.path.join(test_dir, f"test_{test_file.filename}")
+        async with aiofiles.open(test_path, 'wb') as f:
+            await f.write(content)
+        results["steps"].append(f"3. Wrote file: {test_path}")
+        
+        # Step 4: Verify file exists
+        if os.path.exists(test_path):
+            results["steps"].append(f"4. File verified, size: {os.path.getsize(test_path)}")
+        
+        # Step 5: Clean up
+        os.remove(test_path)
+        os.rmdir(test_dir)
+        results["steps"].append("5. Cleanup successful")
+        
+        results["success"] = True
+        
+    except Exception as e:
+        import traceback
+        results["error"] = str(e)
+        results["traceback"] = traceback.format_exc()
+        results["success"] = False
+    
+    return results
+
+from fastapi import UploadFile, File
+
 @app.get("/api/debug/server-status")
 async def server_status():
     """Debug endpoint to check server configuration and state"""
