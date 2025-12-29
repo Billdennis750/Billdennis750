@@ -138,11 +138,17 @@ async def submit_application(
                 content = await id_card.read()
                 await f.write(content)
             logger.info(f"Saved ID card: {id_card_path}")
-            await f.write(content)
-        
-        async with aiofiles.open(passport_path, 'wb') as f:
-            content = await passport.read()
-            await f.write(content)
+            
+            async with aiofiles.open(passport_path, 'wb') as f:
+                content = await passport.read()
+                await f.write(content)
+            logger.info(f"Saved passport: {passport_path}")
+        except Exception as file_error:
+            logger.error(f"File save error: {file_error}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save uploaded files. Please try again."
+            )
         
         # Calculate estimated repayment
         repayment_info = calculate_repayment(loan_amount, repayment_duration, repayment_frequency)
