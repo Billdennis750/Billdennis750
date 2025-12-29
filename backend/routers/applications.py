@@ -130,6 +130,7 @@ async def submit_application(
             }
             user_result = await db.users.insert_one(user_doc)
             user_id = str(user_result.inserted_id)
+            new_user_created = True
         
         # Create application document
         application_doc = {
