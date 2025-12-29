@@ -1,6 +1,7 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from pathlib import Path
 import logging
@@ -11,10 +12,14 @@ from utils.email import email_service
 from datetime import datetime, timezone, timedelta
 import os
 import asyncio
+import traceback
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Store last errors for debugging
+last_errors = []
 
 # Configure logging
 logging.basicConfig(
