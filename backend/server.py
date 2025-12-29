@@ -150,6 +150,7 @@ async def server_status():
     """Debug endpoint to check server configuration and state"""
     import os
     from config import get_settings
+    from database import get_db
     
     settings = get_settings()
     upload_dir = settings.upload_dir
@@ -172,7 +173,7 @@ async def server_status():
     
     # Count existing applications
     try:
-        db = await get_db()
+        db = get_db()
         app_count = await db.applications.count_documents({})
         user_count = await db.users.count_documents({})
     except Exception as e:
