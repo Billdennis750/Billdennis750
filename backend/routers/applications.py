@@ -263,8 +263,8 @@ async def submit_application(
             # Identity
             "nin": nin,
             "bvn": bvn,
-            "id_card_url": f"/api/uploads/{application_id}/id_card_{id_card.filename}",
-            "passport_url": f"/api/uploads/{application_id}/passport_{passport.filename}",
+            "id_card_url": f"/api/uploads/{application_id}/{id_card_filename}",
+            "passport_url": f"/api/uploads/{application_id}/{passport_filename}",
             # Status
             "status": ApplicationStatus.PENDING_PAYMENT.value,
             "payment_status": "pending",
