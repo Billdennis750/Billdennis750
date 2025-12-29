@@ -291,17 +291,22 @@ async def submit_application(
             "updated_at": datetime.now(timezone.utc)
         }
         
+        logger.info(f"Step 7: Inserting application document for {email}")
         await db.applications.insert_one(application_doc)
+        logger.info(f"Step 8: Application {application_id} inserted successfully")
         
         # Send application received email with payment request
         try:
+            logger.info(f"Step 9: Sending email to {email}")
             await email_service.send_application_received_pending_payment(
                 email, full_name, application_id, loan_amount,
                 repayment_duration, repayment_frequency, repayment_info["payment_amount"]
             )
+            logger.info(f"Step 9: Email sent successfully")
         except Exception as email_error:
             logger.error(f"Failed to send application email: {email_error}")
         
+        logger.info(f"Step 10: Returning success response for {application_id}")
         return {
             "application_id": application_id,
             "user_id": user_id,
