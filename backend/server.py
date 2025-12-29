@@ -173,6 +173,14 @@ async def health_check():
         "version": "1.0.0"
     }
 
+@app.get("/api/debug/last-errors")
+async def get_last_errors():
+    """Get the last 10 errors for debugging"""
+    return {
+        "error_count": len(last_errors),
+        "errors": last_errors
+    }
+
 @app.post("/api/debug/test-file-upload")
 async def test_file_upload(
     test_file: UploadFile = File(...)
