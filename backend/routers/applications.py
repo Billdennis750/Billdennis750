@@ -98,20 +98,46 @@ async def submit_application(
                 )
                 logger.info(f"Existing user {email} (orphaned) creating new application - updated credentials")
         
+        # Validate required files
+        if not id_card or not id_card.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ID Card image is required. Please upload a valid ID card."
+            )
+        if not passport or not passport.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Passport photo is required. Please upload a valid passport photo."
+            )
+        
         # Generate application ID
         app_count = await db.applications.count_documents({})
         application_id = f"LOAN-2025-{app_count + 1:03d}"
+        logger.info(f"Generated application ID: {application_id}")
         
         # Create directory for application files
         app_upload_dir = os.path.join(settings.upload_dir, application_id)
-        os.makedirs(app_upload_dir, exist_ok=True)
+        try:
+            os.makedirs(app_upload_dir, exist_ok=True)
+            logger.info(f"Created upload directory: {app_upload_dir}")
+        except Exception as dir_error:
+            logger.error(f"Failed to create upload directory: {dir_error}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create upload directory. Please try again."
+            )
         
         # Save files first (before creating user)
-        id_card_path = os.path.join(app_upload_dir, f"id_card_{id_card.filename}")
-        passport_path = os.path.join(app_upload_dir, f"passport_{passport.filename}")
+        id_card_filename = f"id_card_{id_card.filename.replace(' ', '_')}"
+        passport_filename = f"passport_{passport.filename.replace(' ', '_')}"
+        id_card_path = os.path.join(app_upload_dir, id_card_filename)
+        passport_path = os.path.join(app_upload_dir, passport_filename)
         
-        async with aiofiles.open(id_card_path, 'wb') as f:
-            content = await id_card.read()
+        try:
+            async with aiofiles.open(id_card_path, 'wb') as f:
+                content = await id_card.read()
+                await f.write(content)
+            logger.info(f"Saved ID card: {id_card_path}")
             await f.write(content)
         
         async with aiofiles.open(passport_path, 'wb') as f:
