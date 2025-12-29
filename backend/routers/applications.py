@@ -63,9 +63,11 @@ async def submit_application(
     user_id = None
     application_id = None
     app_upload_dir = None
+    existing_user = None
+    new_user_created = False
     
     try:
-        # Check if email already exists
+        # Check if email already exists in users collection
         existing_user = await db.users.find_one({"email": email})
         
         if existing_user:
@@ -77,9 +79,20 @@ async def submit_application(
                     detail=f"You already have an application ({existing_app['application_id']}). Please login to check your status or contact support."
                 )
             else:
-                # User exists but has no application - allow them to create one
+                # User exists but has no application (orphaned user from previous failed submission)
+                # Allow them to create a new application using existing user account
                 user_id = str(existing_user["_id"])
-                logger.info(f"Existing user {email} creating new application")
+                # Update the password in case they're using a different one
+                await db.users.update_one(
+                    {"email": email},
+                    {"$set": {
+                        "password_hash": get_password_hash(password),
+                        "full_name": full_name,
+                        "phone": phone,
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+                logger.info(f"Existing user {email} (orphaned) creating new application - updated credentials")
         
         # Generate application ID
         app_count = await db.applications.count_documents({})
