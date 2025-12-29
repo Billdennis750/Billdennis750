@@ -51,15 +51,19 @@ async def submit_application(
     bvn: str = Form(...),
     # Account Password
     password: str = Form(...),
-    # Files
-    id_card: UploadFile = File(...),
-    passport: UploadFile = File(...),
+    # Files - make optional to handle upload issues gracefully
+    id_card: UploadFile = File(None),
+    passport: UploadFile = File(None),
     db=Depends(get_db)
 ):
     """
     Submit a new loan application with account creation.
     Status will be: pending_payment (₦2,500 not paid yet)
     """
+    logger.info(f"Starting application submission for email: {email}")
+    logger.info(f"ID Card received: {id_card.filename if id_card else 'None'}")
+    logger.info(f"Passport received: {passport.filename if passport else 'None'}")
+    
     user_id = None
     application_id = None
     app_upload_dir = None
