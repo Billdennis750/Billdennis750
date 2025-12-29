@@ -217,7 +217,7 @@ async def submit_application(
         raise
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Application submission error: {error_msg}")
+        logger.error(f"Application submission error for {email}: {error_msg}")
         
         # Clean up on failure - remove uploaded files if they exist
         if app_upload_dir and os.path.exists(app_upload_dir):
@@ -227,8 +227,8 @@ async def submit_application(
             except Exception:
                 pass
         
-        # Try to rollback user creation if it was a new user
-        if user_id and not existing_user:
+        # Try to rollback user creation if it was a new user we created
+        if new_user_created and user_id:
             try:
                 from bson import ObjectId
                 await db.users.delete_one({"_id": ObjectId(user_id)})
@@ -237,15 +237,10 @@ async def submit_application(
                 logger.error(f"Failed to rollback user: {rollback_error}")
         
         # Provide more specific error messages
-        if "date_of_birth" in error_msg.lower() or "datetime" in error_msg.lower():
+        if "date_of_birth" in error_msg.lower() or "datetime" in error_msg.lower() or "fromisoformat" in error_msg.lower():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date format. Please use YYYY-MM-DD format for date of birth."
-            )
-        elif "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This email is already registered. Please login or use a different email."
             )
         elif "file" in error_msg.lower() or "upload" in error_msg.lower():
             raise HTTPException(
