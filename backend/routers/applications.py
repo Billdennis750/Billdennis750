@@ -119,9 +119,24 @@ async def submit_application(
                 detail="Passport photo is required. Please upload a valid passport photo."
             )
         
-        # Generate application ID
-        app_count = await db.applications.count_documents({})
-        application_id = f"LOAN-2025-{app_count + 1:03d}"
+        # Generate unique application ID by finding the highest existing ID
+        latest_app = await db.applications.find_one(
+            {},
+            sort=[("application_id", -1)]
+        )
+        if latest_app and latest_app.get("application_id"):
+            # Extract the number from the last application ID (e.g., "LOAN-2025-014" -> 14)
+            try:
+                last_num = int(latest_app["application_id"].split("-")[-1])
+                next_num = last_num + 1
+            except (ValueError, IndexError):
+                # Fallback to count if parsing fails
+                app_count = await db.applications.count_documents({})
+                next_num = app_count + 1
+        else:
+            next_num = 1
+        
+        application_id = f"LOAN-2025-{next_num:03d}"
         logger.info(f"Generated application ID: {application_id}")
         
         # Create directory for application files
