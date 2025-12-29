@@ -302,7 +302,7 @@ async def submit_application(
                 email, full_name, application_id, loan_amount,
                 repayment_duration, repayment_frequency, repayment_info["payment_amount"]
             )
-            logger.info(f"Step 9: Email sent successfully")
+            logger.info("Step 9: Email sent successfully")
         except Exception as email_error:
             logger.error(f"Failed to send application email: {email_error}")
         
