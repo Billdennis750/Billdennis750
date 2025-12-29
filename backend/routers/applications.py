@@ -250,7 +250,10 @@ async def submit_application(
         raise
     except Exception as e:
         error_msg = str(e)
+        import traceback
+        full_traceback = traceback.format_exc()
         logger.error(f"Application submission error for {email}: {error_msg}")
+        logger.error(f"Full traceback: {full_traceback}")
         
         # Clean up on failure - remove uploaded files if they exist
         if app_upload_dir and os.path.exists(app_upload_dir):
@@ -275,10 +278,15 @@ async def submit_application(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date format. Please use YYYY-MM-DD format for date of birth."
             )
-        elif "file" in error_msg.lower() or "upload" in error_msg.lower():
+        elif "file" in error_msg.lower() or "upload" in error_msg.lower() or "permission" in error_msg.lower():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="File upload failed. Please ensure your files are valid images (JPG, PNG) and try again."
+            )
+        elif "disk" in error_msg.lower() or "space" in error_msg.lower() or "quota" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service temporarily unavailable. Please try again later or contact support."
             )
         else:
             raise HTTPException(
