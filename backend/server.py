@@ -130,6 +130,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Exception handler to capture errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_detail = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "path": str(request.url.path),
+        "method": request.method,
+        "error": str(exc),
+        "traceback": traceback.format_exc()
+    }
+    last_errors.append(error_detail)
+    # Keep only last 10 errors
+    while len(last_errors) > 10:
+        last_errors.pop(0)
+    
+    logger.error(f"Unhandled exception: {exc}")
+    logger.error(traceback.format_exc())
+    
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Check /api/debug/last-errors for details."}
+    )
+
 # Include routers
 app.include_router(auth.router)
 app.include_router(applications.router)
