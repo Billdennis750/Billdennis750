@@ -119,18 +119,51 @@ async def submit_application(
         
         # Create user account only if doesn't exist
         if not user_id:
-            user_doc = {
-                "email": email,
-                "full_name": full_name,
-                "phone": phone,
-                "password_hash": get_password_hash(password),
-                "role": "user",
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
-            }
-            user_result = await db.users.insert_one(user_doc)
-            user_id = str(user_result.inserted_id)
-            new_user_created = True
+            try:
+                user_doc = {
+                    "email": email,
+                    "full_name": full_name,
+                    "phone": phone,
+                    "password_hash": get_password_hash(password),
+                    "role": "user",
+                    "created_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                }
+                user_result = await db.users.insert_one(user_doc)
+                user_id = str(user_result.inserted_id)
+                new_user_created = True
+            except Exception as user_create_error:
+                # Handle duplicate key error (race condition - user was created by another request)
+                error_str = str(user_create_error).lower()
+                if "duplicate" in error_str or "e11000" in error_str:
+                    logger.warning(f"Duplicate user detected during creation for {email}, checking if orphaned...")
+                    # Try to find the user that was just created
+                    existing_user = await db.users.find_one({"email": email})
+                    if existing_user:
+                        # Check if this user has an application
+                        existing_app = await db.applications.find_one({"email": email})
+                        if existing_app:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"You already have an application ({existing_app['application_id']}). Please login to check your status."
+                            )
+                        else:
+                            # Orphaned user - use it
+                            user_id = str(existing_user["_id"])
+                            await db.users.update_one(
+                                {"email": email},
+                                {"$set": {
+                                    "password_hash": get_password_hash(password),
+                                    "full_name": full_name,
+                                    "phone": phone,
+                                    "updated_at": datetime.now(timezone.utc)
+                                }}
+                            )
+                            logger.info(f"Using orphaned user {email} after race condition")
+                    else:
+                        raise user_create_error
+                else:
+                    raise user_create_error
         
         # Create application document
         application_doc = {
