@@ -127,38 +127,100 @@ const LoanApplicationPage = () => {
       }
       
       // Submit application
-      const response = await axios.post(`${API}/applications/submit`, formDataObj, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+      let response;
+      try {
+        response = await axios.post(`${API}/applications/submit`, formDataObj, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          timeout: 60000 // 60 second timeout for file upload
+        });
+      } catch (submitError) {
+        console.error('Application submission error:', submitError);
+        
+        // Handle specific error cases
+        if (submitError.response?.status === 400) {
+          const detail = submitError.response?.data?.detail || '';
+          if (detail.includes('already have an application')) {
+            toast.error(detail);
+            // Redirect to login if they have an existing application
+            setTimeout(() => navigate('/login'), 2000);
+            return;
+          }
         }
-      });
+        
+        // Check if it's a network error
+        if (submitError.code === 'ECONNABORTED' || submitError.message?.includes('timeout')) {
+          toast.error('Request timed out. Please check your internet connection and try again.');
+        } else if (!submitError.response) {
+          toast.error('Network error. Please check your internet connection and try again.');
+        } else {
+          toast.error(submitError.response?.data?.detail || 'Failed to submit application. Please try again or contact support.');
+        }
+        setIsSubmitting(false);
+        return;
+      }
       
       const { application_id } = response.data;
       
       toast.success('Application submitted successfully!');
       
-      // Initiate payment
-      const paymentResponse = await axios.post(`${API}/payments/initiate`, {
-        application_id: application_id,
-        customer_email: finalData.email,
-        customer_name: finalData.fullName,
-        customer_phone: finalData.phone,
-        amount: 2500,
-        redirect_url: `${window.location.origin}/payment-callback`
-      });
-      
-      const { checkout_link, order_reference } = paymentResponse.data;
-      
-      // Store references for verification
-      localStorage.setItem('order_reference', order_reference);
+      // Store application info
       localStorage.setItem('application_id', application_id);
       
-      // Redirect to payment page
-      window.location.href = checkout_link;
+      // Try to initiate payment
+      try {
+        const paymentResponse = await axios.post(`${API}/payments/initiate`, {
+          application_id: application_id,
+          customer_email: finalData.email,
+          customer_name: finalData.fullName,
+          customer_phone: finalData.phone,
+          amount: 2500,
+          redirect_url: `${window.location.origin}/payment-callback`
+        }, {
+          timeout: 30000 // 30 second timeout for payment
+        });
+        
+        const { checkout_link, order_reference } = paymentResponse.data;
+        
+        // Store references for verification
+        localStorage.setItem('order_reference', order_reference);
+        
+        // Redirect to payment page
+        window.location.href = checkout_link;
+        
+      } catch (paymentError) {
+        console.error('Payment initiation error:', paymentError);
+        
+        // Application was submitted successfully, but payment failed
+        // Redirect to dashboard where they can pay later
+        toast.info('Application submitted! Redirecting to dashboard to complete payment...');
+        
+        // Auto-login the user and redirect to dashboard
+        try {
+          const loginResponse = await axios.post(`${API}/auth/login`, {
+            email: finalData.email,
+            password: finalData.password
+          });
+          
+          localStorage.setItem('token', loginResponse.data.access_token);
+          localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
+          
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 1500);
+        } catch (loginError) {
+          // If auto-login fails, redirect to login page
+          toast.info('Please login with your email and password to complete payment.');
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
+      }
       
     } catch (error) {
-      console.error('Application submission error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to submit application');
+      console.error('Application error:', error);
+      toast.error('An unexpected error occurred. Please try again or contact support.');
       setIsSubmitting(false);
     }
   };
