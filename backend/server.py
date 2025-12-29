@@ -197,8 +197,6 @@ async def test_file_upload(
     
     return results
 
-from fastapi import UploadFile, File
-
 @app.get("/api/debug/server-status")
 async def server_status():
     """Debug endpoint to check server configuration and state"""
