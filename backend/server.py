@@ -145,6 +145,51 @@ async def health_check():
         "version": "1.0.0"
     }
 
+@app.get("/api/debug/server-status")
+async def server_status():
+    """Debug endpoint to check server configuration and state"""
+    import os
+    from config import get_settings
+    
+    settings = get_settings()
+    upload_dir = settings.upload_dir
+    
+    # Check upload directory
+    upload_exists = os.path.exists(upload_dir)
+    upload_writable = os.access(upload_dir, os.W_OK) if upload_exists else False
+    
+    # Check disk space
+    try:
+        import shutil
+        total, used, free = shutil.disk_usage(upload_dir if upload_exists else "/app")
+        disk_info = {
+            "total_gb": round(total / (1024**3), 2),
+            "used_gb": round(used / (1024**3), 2),
+            "free_gb": round(free / (1024**3), 2)
+        }
+    except Exception as e:
+        disk_info = {"error": str(e)}
+    
+    # Count existing applications
+    try:
+        db = await get_db()
+        app_count = await db.applications.count_documents({})
+        user_count = await db.users.count_documents({})
+    except Exception as e:
+        app_count = f"Error: {e}"
+        user_count = f"Error: {e}"
+    
+    return {
+        "upload_dir": upload_dir,
+        "upload_exists": upload_exists,
+        "upload_writable": upload_writable,
+        "disk_info": disk_info,
+        "application_count": app_count,
+        "user_count": user_count,
+        "backend_url": settings.backend_url,
+        "cors_origins": settings.cors_origins
+    }
+
 @app.post("/api/admin/send-reminders")
 async def trigger_reminders():
     """Manually trigger payment reminders (admin only)"""
