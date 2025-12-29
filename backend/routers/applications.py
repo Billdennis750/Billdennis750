@@ -151,9 +151,12 @@ async def submit_application(
             )
         
         # Calculate estimated repayment
+        logger.info(f"Step 4: Calculating repayment for {email}")
         repayment_info = calculate_repayment(loan_amount, repayment_duration, repayment_frequency)
+        logger.info(f"Step 4: Repayment calculated: {repayment_info}")
         
         # Create user account only if doesn't exist
+        logger.info(f"Step 5: User creation check for {email}, existing user_id: {user_id}")
         if not user_id:
             try:
                 user_doc = {
