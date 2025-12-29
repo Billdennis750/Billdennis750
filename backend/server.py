@@ -158,6 +158,18 @@ async def server_status():
     upload_exists = os.path.exists(upload_dir)
     upload_writable = os.access(upload_dir, os.W_OK) if upload_exists else False
     
+    # Try to actually write a test file
+    write_test = "not_tested"
+    if upload_exists and upload_writable:
+        test_file = os.path.join(upload_dir, "test_write.txt")
+        try:
+            with open(test_file, 'w') as f:
+                f.write("test")
+            os.remove(test_file)
+            write_test = "success"
+        except Exception as e:
+            write_test = f"failed: {str(e)}"
+    
     # Check disk space
     try:
         import shutil
@@ -170,24 +182,37 @@ async def server_status():
     except Exception as e:
         disk_info = {"error": str(e)}
     
-    # Count existing applications
+    # Count existing applications using the correct db reference
     try:
         from database import db as database
-        app_count = await database.applications.count_documents({})
-        user_count = await database.users.count_documents({})
+        if database.db:
+            app_count = await database.db.applications.count_documents({})
+            user_count = await database.db.users.count_documents({})
+        else:
+            app_count = "Database not connected"
+            user_count = "Database not connected"
     except Exception as e:
         app_count = f"Error: {e}"
         user_count = f"Error: {e}"
+    
+    # Check aiofiles availability
+    try:
+        import aiofiles
+        aiofiles_version = aiofiles.__version__
+    except Exception as e:
+        aiofiles_version = f"Error: {e}"
     
     return {
         "upload_dir": upload_dir,
         "upload_exists": upload_exists,
         "upload_writable": upload_writable,
+        "write_test": write_test,
         "disk_info": disk_info,
         "application_count": app_count,
         "user_count": user_count,
         "backend_url": settings.backend_url,
-        "cors_origins": settings.cors_origins
+        "cors_origins": settings.cors_origins,
+        "aiofiles_version": aiofiles_version
     }
 
 @app.post("/api/admin/send-reminders")
