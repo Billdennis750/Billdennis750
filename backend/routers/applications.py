@@ -327,10 +327,20 @@ async def submit_application(
         raise
     except Exception as e:
         error_msg = str(e)
-        import traceback
         full_traceback = traceback.format_exc()
         logger.error(f"Application submission error for {email}: {error_msg}")
         logger.error(f"Full traceback: {full_traceback}")
+        
+        # Store error for debugging
+        application_errors.append({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "email": email,
+            "error": error_msg,
+            "traceback": full_traceback
+        })
+        # Keep only last 5 errors
+        while len(application_errors) > 5:
+            application_errors.pop(0)
         
         # Clean up on failure - remove uploaded files if they exist
         if app_upload_dir and os.path.exists(app_upload_dir):
