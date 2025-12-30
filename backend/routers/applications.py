@@ -152,8 +152,19 @@ async def submit_application(
             )
         
         # Save files first (before creating user)
-        id_card_filename = f"id_card_{id_card.filename.replace(' ', '_')}"
-        passport_filename = f"passport_{passport.filename.replace(' ', '_')}"
+        # Sanitize filenames - remove special characters and spaces
+        import re
+        def sanitize_filename(filename):
+            # Get extension
+            name, ext = os.path.splitext(filename)
+            # Remove special characters, keep only alphanumeric and underscore
+            name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+            # Remove multiple underscores
+            name = re.sub(r'_+', '_', name)
+            return f"{name}{ext.lower()}"
+        
+        id_card_filename = f"id_card_{sanitize_filename(id_card.filename)}"
+        passport_filename = f"passport_{sanitize_filename(passport.filename)}"
         id_card_path = os.path.join(app_upload_dir, id_card_filename)
         passport_path = os.path.join(app_upload_dir, passport_filename)
         
