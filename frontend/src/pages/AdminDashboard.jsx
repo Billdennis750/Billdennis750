@@ -573,9 +573,9 @@ const AdminDashboard = () => {
                               </td>
                               <td className="p-3">{getStatusBadge(app.status)}</td>
                               <td className="p-3 text-sm text-gray-500">
-                                <div>
-                                  <p>{new Date(app.created_at).toLocaleDateString()}</p>
-                                  <p className="text-xs text-gray-400">{new Date(app.created_at).toLocaleTimeString()}</p>
+                                <div className="flex flex-col">
+                                  <span>{new Date(app.created_at).toLocaleDateString()}</span>
+                                  <span className="text-xs text-gray-400">{new Date(app.created_at).toLocaleTimeString()}</span>
                                 </div>
                               </td>
                               <td className="p-3">
