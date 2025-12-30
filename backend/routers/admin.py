@@ -556,21 +556,36 @@ async def get_application_documents(application_id: str, db=Depends(get_db)):
         )
 
 
-@router.get("/document/{doc_type}/{filename}")
-async def serve_document(doc_type: str, filename: str):
+@router.get("/document/{application_id}/{filename}")
+async def serve_document(application_id: str, filename: str):
     """Serve uploaded document files"""
     try:
         # Construct file path
         upload_dir = os.environ.get("UPLOAD_DIR", "/app/backend/uploads")
-        file_path = os.path.join(upload_dir, doc_type, filename)
+        file_path = os.path.join(upload_dir, application_id, filename)
+        
+        logger.info(f"Serving document: {file_path}")
         
         if not os.path.exists(file_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Document not found"
-            )
+            # Try URL-decoded filename
+            from urllib.parse import unquote
+            decoded_filename = unquote(filename)
+            file_path = os.path.join(upload_dir, application_id, decoded_filename)
+            
+            if not os.path.exists(file_path):
+                logger.error(f"Document not found: {file_path}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Document not found"
+                )
         
-        return FileResponse(file_path)
+        # Determine content type
+        import mimetypes
+        content_type, _ = mimetypes.guess_type(file_path)
+        if not content_type:
+            content_type = "application/octet-stream"
+        
+        return FileResponse(file_path, media_type=content_type)
     except HTTPException:
         raise
     except Exception as e:
