@@ -290,8 +290,13 @@ const AdminDashboard = () => {
       toast.error(`No ${docType} document uploaded`);
       return;
     }
+    // Ensure proper URL encoding for the document path
+    const encodedUrl = docUrl.split('/').map((part, index) => 
+      index > 2 ? encodeURIComponent(part) : part
+    ).join('/');
+    
     setDocumentPreview({
-      url: `${BACKEND_URL}${docUrl}`,
+      url: `${BACKEND_URL}${encodedUrl}`,
       type: docType,
       applicantName: applicantName
     });
@@ -303,8 +308,13 @@ const AdminDashboard = () => {
       toast.error(`No ${docType} document uploaded`);
       return;
     }
+    // Ensure proper URL encoding for the document path
+    const encodedUrl = docUrl.split('/').map((part, index) => 
+      index > 2 ? encodeURIComponent(part) : part
+    ).join('/');
+    
     const link = document.createElement('a');
-    link.href = `${BACKEND_URL}${docUrl}`;
+    link.href = `${BACKEND_URL}${encodedUrl}`;
     link.download = `${applicantName}_${docType}`;
     link.click();
   };
