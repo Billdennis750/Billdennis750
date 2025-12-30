@@ -598,6 +598,7 @@ const AdminDashboard = () => {
                                       <p className="text-sm"><span className="text-gray-500">Phone:</span> {app.phone}</p>
                                       <p className="text-sm"><span className="text-gray-500">Home Town:</span> {app.home_town}</p>
                                       <p className="text-sm"><span className="text-gray-500">Address:</span> {app.residential_address}</p>
+                                      <p className="text-sm mt-2"><span className="text-gray-500">Submitted:</span> {new Date(app.created_at).toLocaleString()}</p>
                                     </div>
                                     <div>
                                       <h4 className="font-semibold text-sm mb-2">Bank Details</h4>
