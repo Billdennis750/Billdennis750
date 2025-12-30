@@ -3,7 +3,15 @@ from sendgrid.helpers.mail import Mail
 from config import get_settings
 import logging
 import os
+import asyncio
 from datetime import datetime
+
+# Try to import resend
+try:
+    import resend
+    RESEND_AVAILABLE = True
+except ImportError:
+    RESEND_AVAILABLE = False
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -12,11 +20,83 @@ logger = logging.getLogger(__name__)
 LOGO_URL = os.environ.get("LOGO_URL", "https://customer-assets.emergentagent.com/job_microfin-portal/artifacts/yv8s58dq_1000315618-removebg-preview.png")
 WEBSITE_URL = os.environ.get("BACKEND_URL", "https://cashflowsmfb.com")
 
+# Email provider configuration
+EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "sendgrid").lower()
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+
 class EmailService:
     def __init__(self):
-        self.client = SendGridAPIClient(settings.sendgrid_api_key)
+        self.provider = EMAIL_PROVIDER
         self.from_email = settings.sendgrid_from_email
         self.base_url = WEBSITE_URL
+        
+        # Initialize SendGrid client
+        self.sendgrid_client = SendGridAPIClient(settings.sendgrid_api_key)
+        
+        # Initialize Resend if available and configured
+        if RESEND_AVAILABLE and RESEND_API_KEY:
+            resend.api_key = RESEND_API_KEY
+            logger.info("Resend email provider initialized")
+        
+        logger.info(f"Email service initialized with provider: {self.provider}")
+    
+    async def _send_with_resend(self, to_email: str, subject: str, html_content: str):
+        """Send email using Resend"""
+        try:
+            # Use onboarding@resend.dev for testing, or verified domain for production
+            from_email = "Cashflow MFB <onboarding@resend.dev>"
+            
+            params = {
+                "from": from_email,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content
+            }
+            
+            # Run sync SDK in thread to keep FastAPI non-blocking
+            email = await asyncio.to_thread(resend.Emails.send, params)
+            logger.info(f"Resend email sent to {to_email}, ID: {email.get('id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Resend email failed: {str(e)}")
+            return False
+    
+    def _send_with_sendgrid(self, to_email: str, subject: str, html_content: str):
+        """Send email using SendGrid"""
+        try:
+            message = Mail(
+                from_email=self.from_email,
+                to_emails=to_email,
+                subject=subject,
+                html_content=html_content
+            )
+            response = self.sendgrid_client.send(message)
+            logger.info(f"SendGrid email sent to {to_email}: {response.status_code}")
+            return True
+        except Exception as e:
+            logger.error(f"SendGrid email failed: {str(e)}")
+            return False
+    
+    async def _send_email(self, to_email: str, subject: str, html_content: str):
+        """Send email using configured provider with fallback"""
+        # Try primary provider
+        if self.provider == "resend" and RESEND_AVAILABLE and RESEND_API_KEY:
+            result = await self._send_with_resend(to_email, subject, html_content)
+            if result:
+                return True
+            logger.warning("Resend failed, falling back to SendGrid")
+        
+        # Try SendGrid (primary or fallback)
+        result = self._send_with_sendgrid(to_email, subject, html_content)
+        if result:
+            return True
+        
+        # If SendGrid also fails and we haven't tried Resend yet, try it
+        if self.provider != "resend" and RESEND_AVAILABLE and RESEND_API_KEY:
+            logger.warning("SendGrid failed, trying Resend as fallback")
+            return await self._send_with_resend(to_email, subject, html_content)
+        
+        return False
     
     def _get_email_header(self):
         """Get branded email header with logo"""
@@ -36,9 +116,7 @@ class EmailService:
                 Need help? Contact our support team
             </p>
             <p style="margin: 0;">
-                <a href="mailto:support@cashflowmfb.ng" style="color: #0d7916; text-decoration: none;">support@cashflowmfb.ng</a>
-                &nbsp;|&nbsp;
-                <a href="tel:+2348000000000" style="color: #0d7916; text-decoration: none;">+234 800 CASHFLOW</a>
+                <a href="mailto:payment@cashflowsmfb.com" style="color: #0d7916; text-decoration: none;">payment@cashflowsmfb.com</a>
             </p>
             <p style="color: #adb5bd; font-size: 12px; margin-top: 20px;">
                 © {datetime.now().year} Cashflow MFB. Licensed by CBN.<br>
