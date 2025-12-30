@@ -556,34 +556,49 @@ async def get_application_documents(application_id: str, db=Depends(get_db)):
         )
 
 
-@router.get("/document/{application_id}/{filename}")
+@router.get("/document/{application_id}/{filename:path}")
 async def serve_document(application_id: str, filename: str):
     """Serve uploaded document files"""
     try:
+        from urllib.parse import unquote
+        
+        # URL decode the filename
+        decoded_filename = unquote(filename)
+        
         # Construct file path
         upload_dir = os.environ.get("UPLOAD_DIR", "/app/backend/uploads")
-        file_path = os.path.join(upload_dir, application_id, filename)
+        file_path = os.path.join(upload_dir, application_id, decoded_filename)
         
         logger.info(f"Serving document: {file_path}")
         
         if not os.path.exists(file_path):
-            # Try URL-decoded filename
-            from urllib.parse import unquote
-            decoded_filename = unquote(filename)
-            file_path = os.path.join(upload_dir, application_id, decoded_filename)
+            # Try original filename without decoding
+            file_path = os.path.join(upload_dir, application_id, filename)
             
             if not os.path.exists(file_path):
-                logger.error(f"Document not found: {file_path}")
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Document not found"
-                )
+                # List files in directory to find a match
+                app_dir = os.path.join(upload_dir, application_id)
+                if os.path.exists(app_dir):
+                    files = os.listdir(app_dir)
+                    # Try to find a file that starts with the same prefix
+                    prefix = decoded_filename.split('_')[0] + '_' if '_' in decoded_filename else ''
+                    matching_files = [f for f in files if f.startswith(prefix)] if prefix else files
+                    if matching_files:
+                        file_path = os.path.join(app_dir, matching_files[-1])
+                        logger.info(f"Found matching file: {file_path}")
+                
+                if not os.path.exists(file_path):
+                    logger.error(f"Document not found: {file_path}")
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Document not found"
+                    )
         
         # Determine content type
         import mimetypes
         content_type, _ = mimetypes.guess_type(file_path)
         if not content_type:
-            content_type = "application/octet-stream"
+            content_type = "image/jpeg"  # Default to JPEG for images
         
         return FileResponse(file_path, media_type=content_type)
     except HTTPException:
