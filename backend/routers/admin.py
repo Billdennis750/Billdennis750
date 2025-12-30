@@ -22,6 +22,98 @@ class DisbursementDecisionRequest(BaseModel):
     reason: Optional[str] = None
 
 
+@router.post("/fix-document-urls", response_model=dict)
+async def fix_document_urls(token_data=Depends(get_current_user), db=Depends(get_db)):
+    """
+    Fix document URLs in the database.
+    Converts absolute paths to API URLs and updates URLs to match actual files on disk.
+    Admin only endpoint.
+    """
+    try:
+        # Verify admin role
+        admin = await db.users.find_one({"email": token_data.email})
+        if not admin or admin.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        from config import get_settings
+        settings = get_settings()
+        upload_dir = settings.upload_dir
+        
+        apps = await db.applications.find({}).to_list(1000)
+        
+        fixed_count = 0
+        fixed_apps = []
+        
+        for app in apps:
+            app_id = app.get('application_id')
+            id_card_url = app.get('id_card_url', '')
+            passport_url = app.get('passport_url', '')
+            
+            update_needed = False
+            new_id_card_url = id_card_url
+            new_passport_url = passport_url
+            
+            # Fix absolute path to API path
+            if id_card_url and id_card_url.startswith('/app/backend/uploads/'):
+                new_id_card_url = id_card_url.replace('/app/backend/uploads/', '/api/uploads/')
+                update_needed = True
+            
+            if passport_url and passport_url.startswith('/app/backend/uploads/'):
+                new_passport_url = passport_url.replace('/app/backend/uploads/', '/api/uploads/')
+                update_needed = True
+            
+            # Check if files actually exist and find them
+            app_dir = os.path.join(upload_dir, app_id)
+            
+            if os.path.exists(app_dir):
+                files = os.listdir(app_dir)
+                id_card_files = [f for f in files if f.startswith('id_card_')]
+                passport_files = [f for f in files if f.startswith('passport_')]
+                
+                if id_card_files:
+                    actual_id_card = sorted(id_card_files)[-1]
+                    correct_id_url = f"/api/uploads/{app_id}/{actual_id_card}"
+                    if correct_id_url != new_id_card_url:
+                        new_id_card_url = correct_id_url
+                        update_needed = True
+                
+                if passport_files:
+                    actual_passport = sorted(passport_files)[-1]
+                    correct_passport_url = f"/api/uploads/{app_id}/{actual_passport}"
+                    if correct_passport_url != new_passport_url:
+                        new_passport_url = correct_passport_url
+                        update_needed = True
+            
+            if update_needed:
+                await db.applications.update_one(
+                    {"application_id": app_id},
+                    {"$set": {
+                        "id_card_url": new_id_card_url,
+                        "passport_url": new_passport_url
+                    }}
+                )
+                fixed_apps.append({
+                    "application_id": app_id,
+                    "id_card_url": new_id_card_url,
+                    "passport_url": new_passport_url
+                })
+                fixed_count += 1
+        
+        return {
+            "message": f"Fixed {fixed_count} application document URLs",
+            "fixed_applications": fixed_apps
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Fix document URLs error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fix document URLs"
+        )
+
+
 @router.post("/applications/{application_id}/disbursement", response_model=dict)
 async def process_disbursement_decision(
     application_id: str,
