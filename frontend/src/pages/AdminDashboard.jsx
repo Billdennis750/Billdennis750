@@ -290,13 +290,20 @@ const AdminDashboard = () => {
       toast.error(`No ${docType} document uploaded`);
       return;
     }
-    // Ensure proper URL encoding for the document path
-    const encodedUrl = docUrl.split('/').map((part, index) => 
-      index > 2 ? encodeURIComponent(part) : part
-    ).join('/');
+    
+    // Convert /api/uploads/APP_ID/filename to /api/admin/document/APP_ID/filename
+    let documentUrl = docUrl;
+    if (docUrl.startsWith('/api/uploads/')) {
+      const parts = docUrl.replace('/api/uploads/', '').split('/');
+      if (parts.length >= 2) {
+        const appId = parts[0];
+        const filename = parts.slice(1).join('/');
+        documentUrl = `/api/admin/document/${appId}/${encodeURIComponent(filename)}`;
+      }
+    }
     
     setDocumentPreview({
-      url: `${BACKEND_URL}${encodedUrl}`,
+      url: `${BACKEND_URL}${documentUrl}`,
       type: docType,
       applicantName: applicantName
     });
@@ -308,13 +315,20 @@ const AdminDashboard = () => {
       toast.error(`No ${docType} document uploaded`);
       return;
     }
-    // Ensure proper URL encoding for the document path
-    const encodedUrl = docUrl.split('/').map((part, index) => 
-      index > 2 ? encodeURIComponent(part) : part
-    ).join('/');
+    
+    // Convert /api/uploads/APP_ID/filename to /api/admin/document/APP_ID/filename
+    let documentUrl = docUrl;
+    if (docUrl.startsWith('/api/uploads/')) {
+      const parts = docUrl.replace('/api/uploads/', '').split('/');
+      if (parts.length >= 2) {
+        const appId = parts[0];
+        const filename = parts.slice(1).join('/');
+        documentUrl = `/api/admin/document/${appId}/${encodeURIComponent(filename)}`;
+      }
+    }
     
     const link = document.createElement('a');
-    link.href = `${BACKEND_URL}${encodedUrl}`;
+    link.href = `${BACKEND_URL}${documentUrl}`;
     link.download = `${applicantName}_${docType}`;
     link.click();
   };
