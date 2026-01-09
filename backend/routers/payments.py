@@ -67,28 +67,27 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         # Webhook URL for payment notifications
         webhook_url = f"{settings.backend_url}/api/payments/webhook"
         
-        # Prepare BudPay payment link payload
+        # Prepare BudPay Standard Checkout payload
+        # Using /transaction/initialize endpoint for one-time payments
         budpay_payload = {
+            "email": payment.customer_email,
             "amount": str(int(payment.amount)),
             "currency": "NGN",
-            "name": payment.customer_name,
-            "description": f"{payment_description} - Application {payment.application_id}",
-            "redirect": payment.redirect_url,
-            "email": payment.customer_email,
-            "reference": order_reference
+            "reference": order_reference,
+            "callback": payment.redirect_url
         }
         
-        logger.info(f"Creating BudPay payment link with webhook URL: {webhook_url}")
+        logger.info(f"Creating BudPay checkout with webhook URL: {webhook_url}")
         logger.info(f"BudPay payload: {budpay_payload}")
         
         checkout_link = None
         budpay_reference = None
         
         try:
-            # Create payment link with BudPay
+            # Initialize transaction with BudPay Standard Checkout
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{settings.budpay_base_url}/create_payment_link",
+                    f"{settings.budpay_base_url}/transaction/initialize",
                     headers=get_budpay_headers(),
                     json=budpay_payload
                 )
@@ -101,10 +100,10 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                     
                     if budpay_response.get("status"):
                         data = budpay_response.get("data", {})
-                        checkout_link = data.get("payment_link") or data.get("checkout_url")
-                        budpay_reference = data.get("ref_id") or data.get("reference") or order_reference
+                        checkout_link = data.get("authorization_url")
+                        budpay_reference = data.get("reference") or order_reference
                         
-                        logger.info(f"BudPay payment link created: {checkout_link}")
+                        logger.info(f"BudPay checkout URL created: {checkout_link}")
                     else:
                         error_msg = budpay_response.get("message", "Unknown error")
                         logger.error(f"BudPay API error: {error_msg}")
