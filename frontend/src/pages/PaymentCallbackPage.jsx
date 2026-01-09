@@ -14,13 +14,15 @@ const PaymentCallbackPage = () => {
   const [paymentData, setPaymentData] = useState(null);
   const [pollCount, setPollCount] = useState(0);
   const hasVerified = useRef(false);
+  const isMounted = useRef(true);
 
   // Verify payment on mount
   useEffect(() => {
+    isMounted.current = true;
+    
+    // Skip if already verified (handles StrictMode double-mount)
     if (hasVerified.current) return;
     hasVerified.current = true;
-    
-    const controller = new AbortController();
     
     const verifyPayment = async () => {
       try {
@@ -32,21 +34,25 @@ const PaymentCallbackPage = () => {
         const applicationId = localStorage.getItem('application_id');
 
         if (!orderRef) {
-          setStatus('failed');
+          if (isMounted.current) setStatus('failed');
           return;
         }
 
         // If BudPay returned a failed status directly
         if (budpayStatus === 'failed' || budpayStatus === 'cancelled') {
-          setStatus('failed');
-          setPaymentData({ orderRef, applicationId });
+          if (isMounted.current) {
+            setStatus('failed');
+            setPaymentData({ orderRef, applicationId });
+          }
           return;
         }
 
         // Verify with our backend
         const response = await axios.post(`${API}/payments/verify`, {
           order_ref: orderRef
-        }, { signal: controller.signal });
+        });
+
+        if (!isMounted.current) return;
 
         const { payment_status, transaction_reference, amount: paidAmount } = response.data;
 
@@ -69,8 +75,8 @@ const PaymentCallbackPage = () => {
           setStatus('pending');
         }
       } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error('Payment verification error:', error);
+        console.error('Payment verification error:', error);
+        if (isMounted.current) {
           setStatus('failed');
         }
       }
@@ -78,7 +84,9 @@ const PaymentCallbackPage = () => {
     
     verifyPayment();
     
-    return () => controller.abort();
+    return () => {
+      isMounted.current = false;
+    };
   }, [searchParams]);
 
   // Poll for payment status when pending
