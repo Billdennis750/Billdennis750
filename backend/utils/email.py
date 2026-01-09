@@ -21,17 +21,24 @@ LOGO_URL = os.environ.get("LOGO_URL", "https://customer-assets.emergentagent.com
 WEBSITE_URL = os.environ.get("BACKEND_URL", "https://cashflowsmfb.com")
 
 # Email provider configuration
-EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "sendgrid").lower()
+EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "resend").lower()
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+
 
 class EmailService:
     def __init__(self):
         self.provider = EMAIL_PROVIDER
-        self.from_email = settings.sendgrid_from_email
+        self.from_email = settings.sendgrid_from_email or "payment@cashflowsmfb.com"
         self.base_url = WEBSITE_URL
         
-        # Initialize SendGrid client
-        self.sendgrid_client = SendGridAPIClient(settings.sendgrid_api_key)
+        # Initialize SendGrid client if key is available
+        self.sendgrid_client = None
+        if settings.sendgrid_api_key:
+            try:
+                self.sendgrid_client = SendGridAPIClient(settings.sendgrid_api_key)
+                logger.info("SendGrid email provider initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize SendGrid: {e}")
         
         # Initialize Resend if available and configured
         if RESEND_AVAILABLE and RESEND_API_KEY:
@@ -43,6 +50,10 @@ class EmailService:
     async def _send_with_resend(self, to_email: str, subject: str, html_content: str):
         """Send email using Resend"""
         try:
+            if not RESEND_AVAILABLE or not RESEND_API_KEY:
+                logger.warning("Resend not configured")
+                return False
+                
             # Use onboarding@resend.dev for testing, or verified domain for production
             from_email = "Cashflow MFB <onboarding@resend.dev>"
             
@@ -64,6 +75,10 @@ class EmailService:
     def _send_with_sendgrid(self, to_email: str, subject: str, html_content: str):
         """Send email using SendGrid"""
         try:
+            if not self.sendgrid_client:
+                logger.warning("SendGrid client not initialized")
+                return False
+                
             message = Mail(
                 from_email=self.from_email,
                 to_emails=to_email,
@@ -79,7 +94,7 @@ class EmailService:
     
     async def _send_email(self, to_email: str, subject: str, html_content: str):
         """Send email using configured provider with fallback"""
-        # Try primary provider
+        # Try primary provider (Resend)
         if self.provider == "resend" and RESEND_AVAILABLE and RESEND_API_KEY:
             result = await self._send_with_resend(to_email, subject, html_content)
             if result:
@@ -87,15 +102,17 @@ class EmailService:
             logger.warning("Resend failed, falling back to SendGrid")
         
         # Try SendGrid (primary or fallback)
-        result = self._send_with_sendgrid(to_email, subject, html_content)
-        if result:
-            return True
+        if self.sendgrid_client:
+            result = self._send_with_sendgrid(to_email, subject, html_content)
+            if result:
+                return True
         
         # If SendGrid also fails and we haven't tried Resend yet, try it
         if self.provider != "resend" and RESEND_AVAILABLE and RESEND_API_KEY:
             logger.warning("SendGrid failed, trying Resend as fallback")
             return await self._send_with_resend(to_email, subject, html_content)
         
+        logger.error("All email providers failed")
         return False
     
     def _get_email_header(self):
@@ -222,15 +239,11 @@ class EmailService:
             </p>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='Application Received - Action Required | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                'Application Received - Action Required | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Application received email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send application received email: {str(e)}")
             return False
@@ -301,15 +314,11 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject=f'Payment Confirmed - ₦{amount:,.0f} {fee_label} | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                f'Payment Confirmed - ₦{amount:,.0f} {fee_label} | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Payment confirmation email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send payment confirmation email: {str(e)}")
             return False
@@ -353,15 +362,11 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='Payment Confirmed - Application Under Review | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                'Payment Confirmed - Application Under Review | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Payment confirmed email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send payment confirmed email: {str(e)}")
             return False
@@ -434,15 +439,11 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='🎉 Loan Approved! - Complete Your Disbursement | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                '🎉 Loan Approved! - Complete Your Disbursement | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Approval email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send approval email: {str(e)}")
             return False
@@ -484,15 +485,11 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='Deposit Confirmed - Processing Your Loan | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                'Deposit Confirmed - Processing Your Loan | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Deposit confirmed email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send deposit confirmed email: {str(e)}")
             return False
@@ -572,15 +569,11 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='💰 Loan Disbursed! - Funds Credited | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                '💰 Loan Disbursed! - Funds Credited | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Disbursement email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send disbursement email: {str(e)}")
             return False
@@ -624,15 +617,11 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject=f'⏰ Payment Reminder - {fee_label} | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                f'⏰ Payment Reminder - {fee_label} | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Payment reminder email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send payment reminder email: {str(e)}")
             return False
@@ -659,15 +648,11 @@ class EmailService:
             </p>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='Application Update | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                'Application Update | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Rejection email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send rejection email: {str(e)}")
             return False
@@ -715,15 +700,11 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='Disbursement Update | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                'Disbursement Update | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Disbursement declined email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send disbursement declined email: {str(e)}")
             return False
@@ -780,15 +761,11 @@ class EmailService:
             </p>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='Password Reset Request | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                'Password Reset Request | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Password reset email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send password reset email: {str(e)}")
             return False
@@ -823,17 +800,14 @@ class EmailService:
             </div>
             '''
             
-            message = Mail(
-                from_email=self.from_email,
-                to_emails=to_email,
-                subject='Password Changed Successfully | Cashflow MFB',
-                html_content=self._get_email_template(content)
+            return await self._send_email(
+                to_email,
+                'Password Changed Successfully | Cashflow MFB',
+                self._get_email_template(content)
             )
-            response = self.client.send(message)
-            logger.info(f"Password changed confirmation email sent to {to_email}: {response.status_code}")
-            return True
         except Exception as e:
             logger.error(f"Failed to send password changed email: {str(e)}")
             return False
+
 
 email_service = EmailService()
