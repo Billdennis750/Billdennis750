@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     budpay_secret_key: str = ""
     budpay_public_key: str = ""
     budpay_base_url: str = "https://api.budpay.com/api/v2"
+    # BudPay Webhook Security
+    budpay_webhook_ips: str = ""  # Comma-separated IPs/CIDRs for allowlisting
+    budpay_webhook_secret: str = ""  # Optional separate webhook signing secret
     # Legacy Xixapay (deprecated, kept for migration)
     xixapay_api_key: Optional[str] = ""
     xixapay_public_key: Optional[str] = ""
