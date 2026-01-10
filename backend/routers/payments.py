@@ -276,43 +276,67 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
 @router.post("/webhook")
 async def budpay_webhook(request: Request, db=Depends(get_db)):
     """
-    Handle BudPay payment webhooks.
+    Handle BudPay payment webhooks with comprehensive security.
+    
+    Security measures implemented:
+    1. TLS/HTTPS enforcement
+    2. IP allowlisting (when configured)
+    3. HMAC signature verification
+    4. Replay attack prevention
+    5. Rate limiting
+    6. Audit logging
     
     BudPay sends webhooks when:
     - Payment is successful (charge.success)
     - Payment fails (charge.failed)
-    
-    Webhook payload includes transaction details and status.
     """
+    client_ip = get_client_ip(request)
+    order_ref = "unknown"
+    
     try:
-        # Get raw body
-        body = await request.body()
+        # ================================================================
+        # STEP 1: Comprehensive Security Verification
+        # ================================================================
+        is_secure, client_ip, security_report = await verify_webhook_security(
+            request,
+            require_signature=REQUIRE_WEBHOOK_SIGNATURE,
+            require_ip_allowlist=REQUIRE_IP_ALLOWLIST
+        )
         
-        # Verify webhook signature if provided
-        signature = request.headers.get("x-budpay-signature") or request.headers.get("budpay-signature")
-        
-        if signature and settings.budpay_secret_key:
-            expected_signature = hmac.new(
-                settings.budpay_secret_key.encode('utf-8'),
-                body,
-                hashlib.sha512
-            ).hexdigest()
+        if not is_secure:
+            # Log security failure
+            log_webhook_event(
+                request=request,
+                client_ip=client_ip,
+                reference="unknown",
+                status="security_failed",
+                details=security_report
+            )
             
-            if not hmac.compare_digest(signature.lower(), expected_signature.lower()):
-                logger.warning("Invalid BudPay webhook signature received")
-                # Log but don't reject - some webhook configurations may vary
+            logger.warning(
+                f"Webhook security check failed from {client_ip}: "
+                f"{security_report.get('errors', [])}"
+            )
+            
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Webhook security verification failed"
+            )
         
-        # Parse webhook data
+        # ================================================================
+        # STEP 2: Parse and Validate Webhook Payload
+        # ================================================================
+        body = await request.body()
         webhook_data = json.loads(body)
-        logger.info(f"Received BudPay webhook: {webhook_data}")
+        
+        logger.info(f"Received BudPay webhook from {client_ip}: {webhook_data}")
         
         # Extract event type and data
         # BudPay webhook format: { "notify": "...", "notifyType": "...", "data": {...} }
-        # Or: { "event": "charge.success", "data": {...} }
         event_type = (
             webhook_data.get("notifyType") or 
             webhook_data.get("event") or 
-            webhook_data.get("type") or
+            webhook_data.get("notify") or
             "unknown"
         )
         
@@ -332,17 +356,21 @@ async def budpay_webhook(request: Request, db=Depends(get_db)):
         amount_paid = event_data.get("amount") or event_data.get("charged_amount")
         
         if not order_ref:
-            logger.warning("BudPay webhook missing order reference")
+            logger.warning(f"BudPay webhook missing order reference from {client_ip}")
+            log_webhook_event(request, client_ip, "missing", "rejected", {"reason": "No reference"})
             return {"status": "ok", "message": "No order reference provided"}
         
-        # Find transaction
+        # ================================================================
+        # STEP 3: Find and Update Transaction
+        # ================================================================
         transaction = await db.transactions.find_one({"order_reference": order_ref})
         if not transaction:
             # Try finding by BudPay reference
             transaction = await db.transactions.find_one({"budpay_reference": order_ref})
         
         if not transaction:
-            logger.warning(f"Transaction not found for BudPay webhook: {order_ref}")
+            logger.warning(f"Transaction not found for webhook: {order_ref} from {client_ip}")
+            log_webhook_event(request, client_ip, order_ref, "not_found", {})
             return {"status": "ok", "message": "Transaction not found"}
         
         # Map webhook status to internal status
@@ -359,11 +387,15 @@ async def budpay_webhook(request: Request, db=Depends(get_db)):
         }
         payment_status = status_map.get(transaction_status, "pending")
         
-        # Update transaction
+        # ================================================================
+        # STEP 4: Update Transaction Record
+        # ================================================================
         update_data = {
             "status": payment_status,
             "webhook_received": True,
             "webhook_verified": True,
+            "webhook_ip": client_ip,
+            "webhook_security_report": security_report,
             "updated_at": datetime.now(timezone.utc)
         }
         
@@ -377,14 +409,33 @@ async def budpay_webhook(request: Request, db=Depends(get_db)):
             {"$set": update_data}
         )
         
-        # Update application if payment successful
+        # ================================================================
+        # STEP 5: Process Successful Payment
+        # ================================================================
         if payment_status == "completed":
             await process_successful_payment(transaction, db)
+        
+        # ================================================================
+        # STEP 6: Log Success and Return
+        # ================================================================
+        log_webhook_event(
+            request=request,
+            client_ip=client_ip,
+            reference=order_ref,
+            status="success",
+            details={
+                "event_type": event_type,
+                "payment_status": payment_status,
+                "amount": amount_paid,
+                "security_report": security_report
+            }
+        )
         
         return {"status": "success", "message": "Webhook processed"}
         
     except json.JSONDecodeError:
-        logger.error("Invalid JSON in BudPay webhook payload")
+        logger.error(f"Invalid JSON in webhook payload from {client_ip}")
+        log_webhook_event(request, client_ip, order_ref, "invalid_json", {})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid JSON payload"
@@ -392,7 +443,8 @@ async def budpay_webhook(request: Request, db=Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"BudPay webhook processing error: {str(e)}")
+        logger.error(f"Webhook processing error from {client_ip}: {str(e)}")
+        log_webhook_event(request, client_ip, order_ref, "error", {"error": str(e)})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Webhook processing failed"
