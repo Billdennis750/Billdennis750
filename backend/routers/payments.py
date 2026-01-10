@@ -3,6 +3,12 @@ from pydantic import BaseModel
 from database import get_db
 from config import get_settings
 from utils.email import email_service
+from utils.webhook_security import (
+    verify_webhook_security,
+    log_webhook_event,
+    get_client_ip,
+    WebhookSecurityError
+)
 from datetime import datetime, timezone
 import httpx
 import logging
@@ -14,6 +20,13 @@ import uuid
 logger = logging.getLogger(__name__)
 settings = get_settings()
 router = APIRouter(prefix="/api/payments", tags=["payments"])
+
+# ============================================================================
+# WEBHOOK SECURITY CONFIGURATION
+# ============================================================================
+# Set these to True in production for strict security
+REQUIRE_WEBHOOK_SIGNATURE = False  # Set True when BudPay provides signatures
+REQUIRE_IP_ALLOWLIST = False  # Set True after configuring BUDPAY_WEBHOOK_IPS
 
 
 class PaymentInitiate(BaseModel):
