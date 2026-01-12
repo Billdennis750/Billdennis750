@@ -149,7 +149,16 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                 logger.info(f"OTPay response: {response.text}")
                 
                 if response.status_code == 200:
-                    otpay_response = response.json()
+                    # OTPay sometimes returns response with a prefix before JSON
+                    # e.g., "22802830412{\"status\":true,...}"
+                    response_text = response.text
+                    
+                    # Find the start of JSON object
+                    json_start = response_text.find('{')
+                    if json_start > 0:
+                        response_text = response_text[json_start:]
+                    
+                    otpay_response = json.loads(response_text)
                     
                     if otpay_response.get("status"):
                         accounts = otpay_response.get("accounts", [])
