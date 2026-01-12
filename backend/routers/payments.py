@@ -682,13 +682,31 @@ async def get_banks():
             logger.info(f"OTPay get_banks response: {response.status_code}")
             
             if response.status_code == 200:
-                # Handle OTPay response with potential prefix
+                # Handle OTPay response with potential prefix and multiple JSON arrays
                 response_text = response.text
+                
+                # Find the first JSON array or object
                 json_start = response_text.find('[')
                 if json_start == -1:
                     json_start = response_text.find('{')
                 if json_start > 0:
                     response_text = response_text[json_start:]
+                
+                # OTPay sometimes returns multiple JSON arrays concatenated
+                # Find where the first array ends
+                if response_text.startswith('['):
+                    bracket_count = 0
+                    end_index = 0
+                    for i, char in enumerate(response_text):
+                        if char == '[':
+                            bracket_count += 1
+                        elif char == ']':
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                end_index = i + 1
+                                break
+                    if end_index > 0:
+                        response_text = response_text[:end_index]
                 
                 banks_data = json.loads(response_text)
                 
