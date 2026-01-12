@@ -17,7 +17,8 @@ import {
   Search, CheckCircle, Clock, XCircle, Eye, 
   DollarSign, TrendingUp, UserCheck, AlertCircle,
   Download, RefreshCw, ChevronDown, ChevronUp, Settings,
-  Lock, Mail as MailIcon, Send, Image, FileImage, X, Trash2, AlertTriangle
+  Lock, Mail as MailIcon, Send, Image, FileImage, X, Trash2, AlertTriangle,
+  Wallet, Building2, ArrowUpRight, Loader2
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
