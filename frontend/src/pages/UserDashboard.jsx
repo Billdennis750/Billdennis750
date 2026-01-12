@@ -467,6 +467,89 @@ const UserDashboard = () => {
           </>
         )}
       </div>
+
+      {/* Bank Transfer Payment Modal */}
+      {showPaymentModal && paymentDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-2xl shadow-2xl ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Building2 className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className={`text-xl font-bold ${textPrimary}`}>Bank Transfer Payment</h3>
+                <p className={`text-sm mt-1 ${textMuted}`}>
+                  Transfer exactly ₦{paymentDetails.amount?.toLocaleString()} to complete payment
+                </p>
+              </div>
+
+              <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'} space-y-4`}>
+                <div className="flex justify-between items-center">
+                  <span className={`text-sm ${textMuted}`}>Bank Name</span>
+                  <span className={`font-semibold ${textPrimary}`}>
+                    {paymentDetails.virtual_account?.bank_name}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className={`text-sm ${textMuted}`}>Account Name</span>
+                  <span className={`font-semibold text-sm ${textPrimary}`}>
+                    {paymentDetails.virtual_account?.account_name}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className={`text-sm ${textMuted}`}>Account Number</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-mono font-bold text-lg ${textPrimary}`}>
+                      {paymentDetails.virtual_account?.account_number}
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(paymentDetails.virtual_account?.account_number, 'Account number')}
+                      className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="pt-3 border-t border-dashed">
+                  <div className="flex justify-between items-center">
+                    <span className={`text-sm ${textMuted}`}>Amount to Pay</span>
+                    <span className="font-bold text-xl text-green-600">
+                      ₦{paymentDetails.amount?.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-yellow-900/30' : 'bg-yellow-50'} border ${isDarkMode ? 'border-yellow-800' : 'border-yellow-200'}`}>
+                <p className={`text-xs ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
+                  <strong>Important:</strong> Transfer the exact amount shown above. Your payment will be automatically confirmed within 1-2 minutes after successful transfer.
+                </p>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <Button
+                  onClick={handlePaymentComplete}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  I've Made the Transfer
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
