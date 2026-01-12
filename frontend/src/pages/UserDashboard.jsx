@@ -63,6 +63,9 @@ const UserDashboard = () => {
     }
   };
 
+  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   const handlePayment = async (app, paymentType) => {
     setPaymentLoading(true);
     try {
@@ -81,11 +84,39 @@ const UserDashboard = () => {
       localStorage.setItem('application_id', app.application_id);
       localStorage.setItem('payment_type', paymentType);
       
-      window.location.href = response.data.checkout_link;
+      // Check if it's a virtual account (bank transfer) or checkout link
+      if (response.data.virtual_account) {
+        // OTPay - Show bank transfer details
+        setPaymentDetails({
+          ...response.data,
+          paymentType,
+          amount
+        });
+        setShowPaymentModal(true);
+        setPaymentLoading(false);
+      } else if (response.data.checkout_link) {
+        // Legacy checkout flow (BudPay, etc.)
+        window.location.href = response.data.checkout_link;
+      } else {
+        toast.error('Payment method not available');
+        setPaymentLoading(false);
+      }
     } catch (error) {
       toast.error('Failed to initiate payment');
       setPaymentLoading(false);
     }
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
+
+  const handlePaymentComplete = () => {
+    setShowPaymentModal(false);
+    toast.success('Payment verification in progress. Please wait...');
+    // Redirect to callback page to check payment status
+    navigate(`/payment-callback?orderRef=${paymentDetails?.order_reference}`);
   };
 
   const handleLogout = () => {
