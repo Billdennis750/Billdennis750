@@ -1291,9 +1291,9 @@ const AdminDashboard = () => {
                         <SelectValue placeholder={loadingBanks ? "Loading banks..." : "Select a bank"} />
                       </SelectTrigger>
                       <SelectContent className="max-h-60">
-                        {banks.map((bank) => (
-                          <SelectItem key={bank.code || bank.id} value={bank.code || bank.id}>
-                            {bank.name}
+                        {banks.map((bank, idx) => (
+                          <SelectItem key={bank.bank_code || bank.code || idx} value={bank.bank_code || bank.code}>
+                            {bank.bank_name || bank.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
