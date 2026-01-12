@@ -655,6 +655,14 @@ const AdminDashboard = () => {
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </TabsTrigger>
+            <TabsTrigger 
+              value="withdrawal" 
+              className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
+              onClick={() => { fetchBanks(); fetchPayoutHistory(); }}
+            >
+              <Wallet className="w-4 h-4 mr-2" />
+              Withdrawal
+            </TabsTrigger>
           </TabsList>
 
           {/* Applications Tab */}
