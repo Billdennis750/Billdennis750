@@ -122,7 +122,6 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         
         # Determine payment type
         is_processing_fee = payment.amount <= 2500
-        payment_description = "Loan Processing Fee" if is_processing_fee else "Loan Security Deposit"
         
         # Prepare OTPay virtual account creation payload
         otpay_payload = {
