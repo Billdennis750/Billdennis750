@@ -89,8 +89,10 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 ```
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=cashflow_mfb
-BUDPAY_SECRET_KEY=sk_live_xxx
-BUDPAY_PUBLIC_KEY=pk_live_xxx
+OTPAY_API_KEY=APIKEY-xxx
+OTPAY_SECRET_KEY=SECKEY-xxx
+OTPAY_BUSINESS_CODE=xxx
+OTPAY_WEBHOOK_IPS=185.31.40.25,2a00:b6e0:1:20:16::1
 RESEND_API_KEY=re_xxx
 EMAIL_PROVIDER=resend
 ```
@@ -105,8 +107,10 @@ REACT_APP_BACKEND_URL=https://cashflow-patch.preview.emergentagent.com
 - **Test User**: test_payment_user@example.com / TestPass123!
 
 ## Key Files
-- `/app/backend/routers/payments.py` - BudPay integration
+- `/app/backend/routers/payments.py` - OTPay integration (virtual accounts)
+- `/app/backend/utils/webhook_security.py` - Webhook security module
 - `/app/backend/utils/email.py` - Email service (Resend/SendGrid)
-- `/app/frontend/src/pages/UserDashboard.jsx` - User payment flow
+- `/app/frontend/src/pages/UserDashboard.jsx` - User payment flow with bank transfer modal
 - `/app/frontend/src/pages/PaymentCallbackPage.jsx` - Payment callback handling
 - `/app/frontend/src/pages/AdminDashboard.jsx` - Admin management
+- `/app/docs/WEBHOOK_SECURITY.md` - Webhook security documentation
