@@ -650,3 +650,274 @@ async def get_virtual_account(application_id: str, db=Depends(get_db)):
         va["updated_at"] = va["updated_at"].isoformat()
     
     return va
+
+
+# ============================================================================
+# PAYOUT/WITHDRAWAL ENDPOINTS (Admin Only)
+# ============================================================================
+
+class BankAccountVerify(BaseModel):
+    bank_code: str
+    account_number: str
+
+
+class PayoutRequest(BaseModel):
+    bank_code: str
+    account_number: str
+    account_name: str
+    amount: float
+    narration: str = "Cashflow MFB Withdrawal"
+
+
+@router.get("/banks")
+async def get_banks():
+    """Get list of available banks for payout"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{OTPAY_BASE_URL}/get_banks",
+                headers={"api-key": settings.otpay_api_key}
+            )
+            
+            logger.info(f"OTPay get_banks response: {response.status_code}")
+            
+            if response.status_code == 200:
+                # Handle OTPay response with potential prefix
+                response_text = response.text
+                json_start = response_text.find('[')
+                if json_start == -1:
+                    json_start = response_text.find('{')
+                if json_start > 0:
+                    response_text = response_text[json_start:]
+                
+                banks_data = json.loads(response_text)
+                
+                # If it's a list, return directly
+                if isinstance(banks_data, list):
+                    return {"status": True, "banks": banks_data}
+                
+                # If it has status field
+                if banks_data.get("status"):
+                    return {"status": True, "banks": banks_data.get("data", banks_data.get("banks", []))}
+                
+                return {"status": True, "banks": banks_data}
+            else:
+                logger.error(f"OTPay get_banks error: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Failed to fetch banks list"
+                )
+                
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Bank list request timed out"
+        )
+    except Exception as e:
+        logger.error(f"Get banks error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch banks: {str(e)}"
+        )
+
+
+@router.post("/verify-account")
+async def verify_bank_account(account: BankAccountVerify):
+    """Verify bank account details before payout"""
+    try:
+        payload = {
+            "business_code": settings.otpay_business_code,
+            "bank_account_no": account.account_number,
+            "bank_code": account.bank_code
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{OTPAY_BASE_URL}/query_bank_account",
+                headers=get_otpay_headers(),
+                json=payload
+            )
+            
+            logger.info(f"OTPay verify account response: {response.status_code}")
+            logger.info(f"OTPay verify account: {response.text}")
+            
+            if response.status_code == 200:
+                # Handle OTPay response with potential prefix
+                response_text = response.text
+                json_start = response_text.find('{')
+                if json_start > 0:
+                    response_text = response_text[json_start:]
+                
+                result = json.loads(response_text)
+                
+                if result.get("status"):
+                    return {
+                        "status": True,
+                        "account_number": result.get("account_number"),
+                        "account_name": result.get("account_name"),
+                        "bank_name": result.get("bank_name")
+                    }
+                else:
+                    return {
+                        "status": False,
+                        "message": result.get("desc", "Account verification failed")
+                    }
+            else:
+                logger.error(f"OTPay verify account error: {response.status_code}")
+                return {
+                    "status": False,
+                    "message": "Account verification failed"
+                }
+                
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Account verification timed out"
+        )
+    except Exception as e:
+        logger.error(f"Verify account error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Account verification failed: {str(e)}"
+        )
+
+
+@router.post("/payout")
+async def initiate_payout(payout: PayoutRequest, db=Depends(get_db)):
+    """
+    Initiate a payout/withdrawal from OTPay wallet to a bank account.
+    Admin only endpoint.
+    """
+    try:
+        # Validate amount
+        if payout.amount < 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Minimum withdrawal amount is ₦100"
+            )
+        
+        # Create payout reference
+        payout_reference = f"PAYOUT-{uuid.uuid4().hex[:12].upper()}"
+        
+        payload = {
+            "business_code": settings.otpay_business_code,
+            "bank_account_no": payout.account_number,
+            "bank_code": payout.bank_code,
+            "amount": int(payout.amount)
+        }
+        
+        logger.info(f"Initiating OTPay payout: {payload}")
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{OTPAY_BASE_URL}/payout",
+                headers=get_otpay_headers(),
+                json=payload
+            )
+            
+            logger.info(f"OTPay payout response: {response.status_code}")
+            logger.info(f"OTPay payout: {response.text}")
+            
+            if response.status_code == 200:
+                # Handle OTPay response with potential prefix
+                response_text = response.text
+                json_start = response_text.find('{')
+                if json_start > 0:
+                    response_text = response_text[json_start:]
+                
+                result = json.loads(response_text)
+                
+                # Store payout record
+                payout_record = {
+                    "reference": payout_reference,
+                    "otpay_reference": result.get("reference", ""),
+                    "bank_code": payout.bank_code,
+                    "account_number": payout.account_number,
+                    "account_name": payout.account_name,
+                    "amount": payout.amount,
+                    "fee": result.get("fee", 0),
+                    "narration": payout.narration,
+                    "status": "completed" if result.get("status") else "failed",
+                    "response": result,
+                    "wallet_balance": result.get("wallet_balance"),
+                    "created_at": datetime.now(timezone.utc)
+                }
+                
+                await db.payouts.insert_one(payout_record)
+                
+                if result.get("status"):
+                    return {
+                        "status": True,
+                        "message": result.get("desc", "Payout successful"),
+                        "reference": payout_reference,
+                        "otpay_reference": result.get("reference"),
+                        "amount": payout.amount,
+                        "fee": result.get("fee", 0),
+                        "wallet_balance": result.get("wallet_balance")
+                    }
+                else:
+                    return {
+                        "status": False,
+                        "message": result.get("desc", "Payout failed"),
+                        "reference": payout_reference
+                    }
+            else:
+                logger.error(f"OTPay payout error: {response.status_code} - {response.text}")
+                
+                # Store failed payout
+                payout_record = {
+                    "reference": payout_reference,
+                    "bank_code": payout.bank_code,
+                    "account_number": payout.account_number,
+                    "account_name": payout.account_name,
+                    "amount": payout.amount,
+                    "narration": payout.narration,
+                    "status": "failed",
+                    "error": response.text,
+                    "created_at": datetime.now(timezone.utc)
+                }
+                await db.payouts.insert_one(payout_record)
+                
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Payout request failed"
+                )
+                
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Payout request timed out"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Payout error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Payout failed: {str(e)}"
+        )
+
+
+@router.get("/payouts")
+async def get_payouts(db=Depends(get_db)):
+    """Get payout history (Admin only)"""
+    try:
+        payouts = await db.payouts.find(
+            {},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(50).to_list(length=50)
+        
+        # Convert datetime objects
+        for payout in payouts:
+            if payout.get("created_at"):
+                payout["created_at"] = payout["created_at"].isoformat()
+        
+        return {"payouts": payouts}
+        
+    except Exception as e:
+        logger.error(f"Get payouts error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch payouts"
+        )
+
