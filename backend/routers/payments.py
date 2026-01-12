@@ -300,7 +300,13 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
                     )
                     
                     if response.status_code == 200:
-                        otpay_data = response.json()
+                        # Handle OTPay response with potential prefix
+                        response_text = response.text
+                        json_start = response_text.find('{')
+                        if json_start > 0:
+                            response_text = response_text[json_start:]
+                        
+                        otpay_data = json.loads(response_text)
                         if otpay_data.get("status") and otpay_data.get("data"):
                             data = otpay_data["data"]
                             if data.get("status") == "sent":
