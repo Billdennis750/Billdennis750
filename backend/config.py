@@ -10,14 +10,20 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str
     access_token_expire_minutes: int
-    # BudPay Payment Gateway
+    # OTPay Payment Gateway (Primary)
+    otpay_api_key: str = ""
+    otpay_secret_key: str = ""
+    otpay_business_code: str = ""
+    otpay_base_url: str = "https://otpay.ng/api/v1"
+    # OTPay Webhook Security (Official IPs: 185.31.40.25, 2a00:b6e0:1:20:16::1)
+    otpay_webhook_ips: str = "185.31.40.25,2a00:b6e0:1:20:16::1"
+    # Legacy BudPay (deprecated)
     budpay_secret_key: str = ""
     budpay_public_key: str = ""
     budpay_base_url: str = "https://api.budpay.com/api/v2"
-    # BudPay Webhook Security
-    budpay_webhook_ips: str = ""  # Comma-separated IPs/CIDRs for allowlisting
-    budpay_webhook_secret: str = ""  # Optional separate webhook signing secret
-    # Legacy Xixapay (deprecated, kept for migration)
+    budpay_webhook_ips: str = ""
+    budpay_webhook_secret: str = ""
+    # Legacy Xixapay (deprecated)
     xixapay_api_key: Optional[str] = ""
     xixapay_public_key: Optional[str] = ""
     xixapay_merchant_id: Optional[str] = ""
