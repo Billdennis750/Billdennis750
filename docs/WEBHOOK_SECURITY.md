@@ -1,226 +1,137 @@
-# BudPay Webhook Security Implementation
+# Payment Gateway Webhook Security Implementation
 
 ## Overview
 
-This document describes the comprehensive webhook security implementation for the Cashflow MFB BudPay integration.
+This document describes the comprehensive webhook security implementation for the Cashflow MFB payment integrations.
+
+## Current Provider: OTPay (otpay.ng)
+
+OTPay is a Nigerian virtual account payment gateway that enables bank transfer payments.
+
+### Payment Flow
+1. **Create Virtual Account** → Customer receives unique bank account details
+2. **Customer Transfers** → Customer sends exact amount to the virtual account
+3. **Webhook Notification** → OTPay sends webhook when payment is received
+4. **Auto-Confirmation** → System updates application status automatically
+
+### OTPay Webhook IPs (Official)
+```
+IPv4: 185.31.40.25
+IPv6: 2a00:b6e0:1:20:16::1
+```
 
 ## Security Measures Implemented
 
-### 1. HMAC Signature Verification ✅
+### 1. IP Allowlisting ✅
 
 ```python
-# Location: /app/backend/utils/webhook_security.py
+# OTPay Official Webhook IPs (from documentation)
+OTPAY_WEBHOOK_IPS = {"185.31.40.25", "2a00:b6e0:1:20:16::1"}
 
-def verify_webhook_signature(request, payload, secret_key):
-    """
-    Verifies HMAC-SHA512 signature using constant-time comparison
-    to prevent timing attacks.
-    """
-    signature = request.headers.get("x-budpay-signature")
-    expected = hmac.new(secret_key.encode(), payload, hashlib.sha512).hexdigest()
-    return hmac.compare_digest(signature.lower(), expected.lower())
+# Verification in webhook handler
+if client_ip not in OTPAY_WEBHOOK_IPS:
+    raise HTTPException(status_code=403, detail="Unauthorized IP")
 ```
-
-**Configuration:**
-- `BUDPAY_WEBHOOK_SECRET` in `.env` for separate webhook signing key
-- Falls back to `BUDPAY_SECRET_KEY` if not set
 
 ### 2. TLS/HTTPS Enforcement ✅
 
 ```python
 def verify_tls(request):
-    """
-    Checks X-Forwarded-Proto header (for proxied requests)
-    and direct URL scheme for HTTPS.
-    """
-    # Checks: X-Forwarded-Proto, request.url.scheme
-    # Allows HTTP only for localhost development
+    # Checks X-Forwarded-Proto header (for proxied requests)
+    # and direct URL scheme for HTTPS
 ```
 
-### 3. IP Allowlisting ✅
-
-```python
-# Configuration in .env:
-BUDPAY_WEBHOOK_IPS="52.31.139.75,52.49.173.169,52.214.14.220"
-
-# Supports:
-# - Individual IPs: "52.31.139.75"
-# - CIDR blocks: "52.31.139.0/24"
-# - Multiple values: comma-separated
-```
-
-**Important:** Contact BudPay support to get their official webhook IPs.
-
-### 4. Replay Attack Prevention ✅
-
-```python
-def check_replay_attack(reference, timestamp):
-    """
-    - Stores processed webhook references in memory
-    - Rejects webhooks older than 5 minutes (MAX_WEBHOOK_AGE_SECONDS)
-    - Rejects duplicate references within 1 hour
-    """
-```
-
-### 5. Rate Limiting ✅
+### 3. Rate Limiting ✅
 
 ```python
 MAX_WEBHOOKS_PER_MINUTE = 100
 
-def check_rate_limit(client_ip):
-    """
-    Limits webhooks to 100 per IP per minute.
-    Prevents DDoS and brute-force attacks.
-    """
+# Limits webhooks to 100 per IP per minute
+# Prevents DDoS and brute-force attacks
 ```
 
-### 6. Audit Logging ✅
+### 4. Replay Attack Prevention ✅
+
+```python
+# Stores processed webhook references in memory
+# Rejects webhooks older than 5 minutes
+# Rejects duplicate references within 1 hour
+```
+
+### 5. Comprehensive Audit Logging ✅
 
 Every webhook event is logged with:
 - Timestamp
 - Client IP
-- Reference
+- Transaction reference
 - Status (success/failed/rejected)
 - User-Agent
-- Security report
-
-```json
-{
-  "timestamp": "2026-01-10T16:58:36.701695+00:00",
-  "event_type": "webhook_received",
-  "client_ip": "52.31.139.75",
-  "reference": "CASHFLOW-LOAN-2025-002-abc123",
-  "status": "success",
-  "user_agent": "BudPay-Webhook/1.0",
-  "details": {
-    "tls_verified": true,
-    "ip_allowed": true,
-    "signature_valid": true
-  }
-}
-```
+- Full payload for debugging
 
 ## Configuration
 
 ### Environment Variables (.env)
 
 ```bash
-# BudPay Webhook Security
-BUDPAY_WEBHOOK_IPS=""        # Comma-separated IPs/CIDRs
-BUDPAY_WEBHOOK_SECRET=""     # Optional signing secret
+# OTPay Payment Gateway (Primary)
+OTPAY_API_KEY="APIKEY-xxx"
+OTPAY_SECRET_KEY="SECKEY-xxx"
+OTPAY_BUSINESS_CODE="xxx"
+OTPAY_BASE_URL="https://otpay.ng/api/v1"
+
+# OTPay Official Webhook IPs
+OTPAY_WEBHOOK_IPS="185.31.40.25,2a00:b6e0:1:20:16::1"
 ```
 
-### Strict Mode (Production)
+### Webhook URL Configuration
 
-In `/app/backend/routers/payments.py`:
-
-```python
-# Set these to True for production
-REQUIRE_WEBHOOK_SIGNATURE = True   # Reject without valid signature
-REQUIRE_IP_ALLOWLIST = True        # Reject from non-allowed IPs
-```
-
-## Webhook URL Configuration
-
-### For Production (Dedicated Subdomain)
-
-Configure in BudPay Dashboard:
-```
-https://webhooks.cashflowsmfb.com/api/payments/webhook
-```
-
-**DNS Configuration Required:**
-1. Create A record: `webhooks.cashflowsmfb.com` → Your server IP
-2. Configure SSL certificate for the subdomain
-3. Set up nginx/reverse proxy to route to your backend
-
-### For Current Setup
-
+Set this URL in your OTPay merchant dashboard (Developer > Webhook URL):
 ```
 https://cashflowsmfb.com/api/payments/webhook
 ```
 
-## Security Flow
+## OTPay Webhook Payload Format
 
-```
-BudPay Server
-     │
-     ▼
-┌─────────────────────────────────────────────────┐
-│  1. TLS Verification                            │
-│     - Check HTTPS connection                    │
-│     - Verify X-Forwarded-Proto header           │
-└─────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────┐
-│  2. IP Allowlist Check                          │
-│     - Extract client IP (X-Forwarded-For)       │
-│     - Verify against BUDPAY_WEBHOOK_IPS         │
-└─────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────┐
-│  3. Rate Limiting                               │
-│     - Check requests per minute per IP          │
-│     - Reject if > 100/minute                    │
-└─────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────┐
-│  4. Signature Verification                      │
-│     - Compute HMAC-SHA512 of payload            │
-│     - Compare with x-budpay-signature header    │
-└─────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────┐
-│  5. Replay Attack Check                         │
-│     - Check if reference already processed      │
-│     - Verify timestamp is within 5 minutes      │
-└─────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────┐
-│  6. Process Webhook                             │
-│     - Parse payload                             │
-│     - Update transaction status                 │
-│     - Send confirmation emails                  │
-└─────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────┐
-│  7. Audit Log                                   │
-│     - Log all details for compliance            │
-└─────────────────────────────────────────────────┘
+```json
+{
+  "email": "customer@example.com",
+  "phone": "09012345678",
+  "business_code": "XXXXXXXXXX",
+  "account_number": "6680269830",
+  "customer_account_name": "John Doe - [BLM DATA SOLUTIONS LTD](OT-PAY)",
+  "customer_account_bank": "PALMPAY",
+  "amount": 2500,
+  "date": "2025-01-12 14:05:00",
+  "transaction_reference": "MIXXXXXXXXXXXXXXXXX",
+  "customer_senderbankname": "OPAY",
+  "customer_senderaccountnumber": "****1234",
+  "customer_sendername": "JOHN DOE"
+}
 ```
 
-## Testing Webhook Security
+## API Endpoints
 
-```bash
-# Test with mock webhook (should be rejected without proper setup)
-curl -X POST https://cashflowsmfb.com/api/payments/webhook \
-  -H "Content-Type: application/json" \
-  -H "x-budpay-signature: invalid_signature" \
-  -d '{"notify":"transaction","notifyType":"successful","data":{"reference":"TEST-001","status":"success"}}'
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/payments/initiate` | POST | Create virtual account for payment |
+| `/api/payments/verify` | POST | Check payment status |
+| `/api/payments/webhook` | POST | Receive OTPay notifications |
+| `/api/payments/virtual-account/{app_id}` | GET | Get virtual account details |
+| `/api/payments/transaction/{ref}` | GET | Get transaction details |
 
-# Expected: 403 Forbidden (when REQUIRE_WEBHOOK_SIGNATURE=True)
-```
+## Legacy Providers (Deprecated)
+
+### BudPay
+- Status: Deprecated
+- Reason: Replaced by OTPay per user request
+
+### Xixapay
+- Status: Deprecated
+- Reason: Replaced by BudPay, then OTPay
 
 ## Compliance Notes
 
-1. **PCI-DSS**: No card data is stored; BudPay handles all sensitive payment info
+1. **PCI-DSS**: No card data is stored; OTPay handles all sensitive payment info
 2. **Data Retention**: Webhook audit logs should be retained per regulatory requirements
 3. **Encryption**: All data transmitted over TLS 1.2+
-4. **Access Control**: Webhook endpoint only accepts POST from verified sources
-
-## Next Steps for Production
-
-1. **Contact BudPay Support** to get official webhook IP addresses
-2. **Configure `BUDPAY_WEBHOOK_IPS`** with the provided IPs
-3. **Enable strict mode** by setting:
-   - `REQUIRE_WEBHOOK_SIGNATURE = True`
-   - `REQUIRE_IP_ALLOWLIST = True`
-4. **Set up dedicated webhook subdomain** (`webhooks.cashflowsmfb.com`)
-5. **Configure Redis** for rate limiting and replay prevention (currently in-memory)
-6. **Set up log aggregation** for webhook audit logs (CloudWatch, ELK, etc.)
+4. **Access Control**: Webhook endpoint only accepts POST from verified OTPay IPs
