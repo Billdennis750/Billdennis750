@@ -396,6 +396,138 @@ const AdminDashboard = () => {
     setUserDetails(null);
   };
 
+  // Withdrawal Functions
+  const fetchBanks = async () => {
+    if (banks.length > 0) return; // Already fetched
+    setLoadingBanks(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/payments/banks`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.status) {
+        setBanks(response.data.banks || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch banks:', error);
+      toast.error('Failed to load banks list');
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
+
+  const fetchPayoutHistory = async () => {
+    setLoadingPayouts(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/payments/payouts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPayoutHistory(response.data.payouts || []);
+    } catch (error) {
+      console.error('Failed to fetch payouts:', error);
+    } finally {
+      setLoadingPayouts(false);
+    }
+  };
+
+  const verifyBankAccount = async () => {
+    if (!withdrawalData.bank_code || !withdrawalData.account_number) {
+      toast.error('Please select a bank and enter account number');
+      return;
+    }
+    
+    if (withdrawalData.account_number.length !== 10) {
+      toast.error('Account number must be 10 digits');
+      return;
+    }
+    
+    setVerifyingAccount(true);
+    setAccountVerified(false);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/payments/verify-account`, {
+        bank_code: withdrawalData.bank_code,
+        account_number: withdrawalData.account_number
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.status) {
+        setWithdrawalData(prev => ({
+          ...prev,
+          account_name: response.data.account_name
+        }));
+        setAccountVerified(true);
+        toast.success(`Account verified: ${response.data.account_name}`);
+      } else {
+        toast.error(response.data.message || 'Account verification failed');
+      }
+    } catch (error) {
+      toast.error('Failed to verify account');
+    } finally {
+      setVerifyingAccount(false);
+    }
+  };
+
+  const handleWithdrawal = async () => {
+    if (!accountVerified) {
+      toast.error('Please verify the account first');
+      return;
+    }
+    
+    if (!withdrawalData.amount || parseFloat(withdrawalData.amount) < 100) {
+      toast.error('Minimum withdrawal amount is ₦100');
+      return;
+    }
+    
+    setProcessingWithdrawal(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/payments/payout`, {
+        bank_code: withdrawalData.bank_code,
+        account_number: withdrawalData.account_number,
+        account_name: withdrawalData.account_name,
+        amount: parseFloat(withdrawalData.amount),
+        narration: 'Cashflow MFB Withdrawal'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.status) {
+        toast.success(`Withdrawal successful! Reference: ${response.data.reference}`);
+        // Reset form
+        setWithdrawalData({
+          bank_code: '',
+          account_number: '',
+          account_name: '',
+          amount: ''
+        });
+        setAccountVerified(false);
+        // Refresh payout history
+        fetchPayoutHistory();
+      } else {
+        toast.error(response.data.message || 'Withdrawal failed');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+    } finally {
+      setProcessingWithdrawal(false);
+    }
+  };
+
+  const resetWithdrawalForm = () => {
+    setWithdrawalData({
+      bank_code: '',
+      account_number: '',
+      account_name: '',
+      amount: ''
+    });
+    setAccountVerified(false);
+  };
+
   const filteredApps = applications.filter(app => {
     const matchesSearch = 
       app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
