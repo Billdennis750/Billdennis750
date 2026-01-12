@@ -58,6 +58,10 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 - `POST /api/payments/webhook` - OTPay webhook handler (IP restricted)
 - `GET /api/payments/transaction/{ref}` - Get transaction details
 - `GET /api/payments/virtual-account/{app_id}` - Get virtual account details
+- `GET /api/payments/banks` - Get list of banks for payout
+- `POST /api/payments/verify-account` - Verify bank account before payout
+- `POST /api/payments/payout` - Initiate withdrawal/payout
+- `GET /api/payments/payouts` - Get payout history
 
 ### Admin
 - `POST /api/admin/applications/{id}/status` - Update application status
