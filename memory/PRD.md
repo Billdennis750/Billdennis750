@@ -71,8 +71,10 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 
 ### Completed
 - ✅ **OTPay Integration** - Migrated from BudPay to OTPay virtual account payment system
+- ✅ **OTPay Withdrawal** - Added admin withdrawal/payout functionality with bank verification
 - ✅ **Webhook Security** - Implemented IP allowlisting (185.31.40.25, 2a00:b6e0:1:20:16::1)
 - ✅ **Bank Transfer UI** - Updated UserDashboard with bank transfer payment modal
+- ✅ **Admin Withdrawal Tab** - New tab for withdrawing funds with bank list (667 banks), account verification, payout history
 - ✅ **BudPay Integration** - Previously migrated from Xixapay (now deprecated)
 - ✅ **Email Service Fix** - Fixed email service to use Resend as primary with SendGrid fallback
 - ✅ **Loan Disbursement Workflow** - Added admin approve/decline buttons with email notifications
