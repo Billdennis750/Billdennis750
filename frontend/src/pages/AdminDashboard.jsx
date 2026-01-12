@@ -80,6 +80,21 @@ const AdminDashboard = () => {
   const [deletingUser, setDeletingUser] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [loadingUserDetails, setLoadingUserDetails] = useState(false);
+  
+  // Withdrawal State
+  const [banks, setBanks] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [withdrawalData, setWithdrawalData] = useState({
+    bank_code: '',
+    account_number: '',
+    account_name: '',
+    amount: ''
+  });
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
+  const [accountVerified, setAccountVerified] = useState(false);
+  const [processingWithdrawal, setProcessingWithdrawal] = useState(false);
+  const [payoutHistory, setPayoutHistory] = useState([]);
+  const [loadingPayouts, setLoadingPayouts] = useState(false);
 
   useEffect(() => {
     fetchData();
