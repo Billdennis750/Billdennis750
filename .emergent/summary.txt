@@ -1,103 +1,118 @@
 <analysis>**original_problem_statement:**
-The user initially requested a website for a microfinance bank, Cashflow MFB. Over time, this evolved into a full-stack platform for loan applications with user/admin dashboards, payment integrations, and email notifications.
+The user initially requested a website for a microfinance bank, Cashflow MFB. This evolved into a full-stack platform for loan applications with user/admin dashboards and payment integrations.
 
-In this session, the user's requests focused on fixing critical bugs, implementing a new loan disbursement workflow, and changing service providers.
+In this session, the user's primary requests were to switch payment providers multiple times, implement webhook security, add an admin withdrawal feature, and resolve a persistent production deployment failure on their custom domain.
 
 **PRODUCT REQUIREMENTS (New/Updated in this session):**
-1.  **Code Quality:** Review the entire codebase, identify, and fix all existing errors, bugs, and inconsistencies. (Partially Completed)
-2.  **Loan Disbursement Workflow:**
-    *   Automatically update payment status on the user dashboard after successful processing fee and fixed deposit payments.
-    *   Set loan disbursement status to Pending by default.
-    *   Add manual Approve and Decline buttons on the Admin Dashboard, which trigger email notifications to the user. (Completed)
-3.  **UI/UX:** Add a CBN Licensed section with specific images and text to the About Us page. (Completed)
-4.  **Admin Dashboard:** Add a submission timestamp (date and time) for each application. (Completed)
-5.  **Bug Fixes:**
-    *   **Critical:** Fix a recurring Failed to submit application error. Users also reported seeing This email is already registered for new emails. (In Progress)
-    *   Fix an Image not found error for user-uploaded documents in the admin dashboard. (Completed, pending production verification)
-    *   Fix the non-functional auto-email sending feature. (In Progress)
-6.  **Integration Changes:**
-    *   **Email:** Replace SendGrid (which ran out of credits) with Resend. (In Progress)
-    *   **Payment:** Replace Xixapay with BudPay using new API keys. (Not Started)
+1.  **Payment Gateway Migration:**
+    *   Migrate from Xixapay to BudPay. (Completed)
+    *   Migrate from BudPay to OTPay. (Completed, then reverted)
+    *   Migrate back from OTPay to BudPay. (Completed)
+2.  **Webhook Security:** Implement robust security for payment webhooks, including HMAC signature verification, TLS enforcement, and audit logging. (Completed)
+3.  **Admin Feature:** Add a withdrawal/payout feature to the Admin Dashboard for the active payment provider (OTPay). (Completed, then disabled upon reverting to BudPay)
+4.  **Bug Fixes:**
+    *   **Critical:** Fix a recurring production deployment failure where health checks fail with a  error. (In Progress)
+    *   Fix admin login issues caused by the frontend pointing to the non-functional production domain. (Resolved by reverting to preview URL)
+5.  **Password Management:** Change the admin password upon user request. (Completed)
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a React frontend and FastAPI backend. It features multi-step loan applications, user/admin dashboards, and various admin functionalities. The agent has completed a code quality review, fixed numerous linting errors, implemented a loan disbursement workflow, and added UI elements. However, the application is plagued by a critical bug preventing form submissions on the production server. The agent was in the middle of migrating the email service from SendGrid to Resend when the user made a new, high-priority request to migrate the payment provider from Xixapay to BudPay.
+A full-stack React/FastAPI application for loan processing. In this session, the payment gateway was changed from Xixapay to BudPay, then to OTPay (with a new virtual account UI and admin withdrawal feature), and finally reverted back to BudPay. A robust webhook security module was implemented. The application is functional in the preview environment but fails to deploy to the user's custom production domain (). The health checks fail during deployment, and the frontend has been configured to use the preview URL to remain testable. The admin password was successfully changed.
 
 **Last working item**:
-    - Last item agent was working: The user abruptly requested to switch the payment provider from Xixapay to BudPay, providing new API keys. This interrupted the ongoing task of migrating the email service from SendGrid to Resend. The last action was the agent acknowledging the new request and preparing to start the BudPay integration.
-    - Status: NOT STARTED
-    - Agent Testing Done: N
-    - Which testing method agent to use? both
-    - User Testing Done: N
+    - Last item agent was working: Fixing a user-reported admin login failure. The agent identified that the frontend was pointing to the non-functional production domain (). The agent changed  to point back to the working preview URL, and the user confirmed they could log in successfully via the preview link.
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y
+    - Which testing method agent to use? manual testing by curl
+    - User Testing Done: Y
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  Critical application submission failure on the production server. (P0)
-  - Issue 2:  Email service migration from SendGrid to Resend is incomplete. (P1)
-  - Issue 3:  The production environment (custom domain) is out of sync with the preview environment, causing fixes to fail post-deployment. (P2)
+  - Issue 1:  **Critical:** Production deployment fails with health check  errors for both frontend and backend. (P0)
+  - Issue 2:  Custom domain  shows Deployment not found or is inaccessible. (P0)
+  - Issue 3:  Email service migration from SendGrid to Resend is incomplete. (P2)
+  - Issue 4:  Original critical application submission bug from the previous fork was never verified on production due to deployment issues. (P2)
 
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: The agent identified and fixed several underlying causes: an  for  by implementing a more robust ID generation logic; created cleanup endpoints for orphaned users; added extensive logging and multiple debug endpoints to trace the error. Despite these fixes working in the preview environment, the issue persists on production.
+     - Attempted fixes: The agent correctly diagnosed that the  errors are likely due to the application failing to start in the production environment. A key theory is that the connection to MongoDB Atlas (used in production) is timing out or failing on startup. The agent made the database connection more resilient in  and made config loading in  more graceful. These changes have not been tested with a new deployment.
      - Next debug checklist:
-        1.  Confirm with the user that the absolute latest version of the code has been redeployed.
-        2.  Use the previously created debug endpoints (, ) on the production server immediately after a failed submission to get the precise error.
-        3.  Investigate potential server-specific issues on production, such as file permissions on the  directory, environment variable caching, or proxy/firewall configurations that might be blocking requests.
-     - Why fix this issue and what will be achieved with the fix? This is the most critical bug, as it makes the primary function of the application (applying for a loan) unusable for end-users.
+        1.  Instruct the user to trigger a new deployment to see if the recent fixes in  and  have resolved the startup and health check failures.
+        2.  If it still fails, analyze the new deployment logs.
+        3.  Check for inconsistencies between local  and production environment variables, specifically . The production  must be the Atlas connection string.
+     - Why fix this issue and what will be achieved with the fix? This is the highest priority blocker. Fixing it will allow the application to be deployed and used on the production domain.
      - Status:  IN PROGRESS
      - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? both
-     - Blocked on other issue: None. Likely blocked by production environment discrepancies.
+     - Blocked on other issue: None. This is the primary blocker.
   - Issue 2: 
-     - Attempted fixes: The agent diagnosed that SendGrid emails were failing due to Maximum credits exceeded. The user provided a Resend API key. The agent installed the  package, added the new key to , and started refactoring  to support both providers, but was interrupted.
+     - Attempted fixes: Agent updated backend and frontend  files to use the production URL. This broke the application in the preview environment. The frontend was reverted, but the backend  is still set to the production domain. The agent also correctly advised the user to contact Emergent support as it could be a platform issue.
      - Next debug checklist:
-        1.  Resume editing .
-        2.  Replace all calls to  with the new generic  wrapper function.
-        3.  Thoroughly test all email-sending functionalities (registration, password reset, loan decision).
-     - Why fix this issue and what will be achieved with the fix? This will restore all email notification functionality for users and admins.
+        1.  This issue is blocked by the deployment failure (Issue 1).
+        2.  Once deployed, verify DNS settings again.
+        3.  Once the production domain is live and confirmed working, update 's  to point to it.
+     - Why fix this issue and what will be achieved with the fix? The user wants their application live on their custom domain.
+     - Status:  BLOCKED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: Issue 1: Critical Production Deployment Failure
+  - Issue 3: 
+     - Attempted fixes: The agent diagnosed SendGrid failures and the user provided a Resend key. The  package was installed, and  was partially refactored. However, logs still show email errors, and the work was not completed.
+     - Next debug checklist:
+        1.  Review  and ensure all email-sending functions use the new  logic when  is set to .
+        2.  Create a temporary test endpoint to trigger and verify each type of email (registration, payment confirmation, etc.).
+     - Why fix this issue and what will be achieved with the fix? Restores critical user and admin notifications.
      - Status:  IN PROGRESS
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix? backend
      - Blocked on other issue: None
-  - Issue 3: 
-     - Attempted fixes: The agent repeatedly identified discrepancies between local/preview  variables (e.g., , ) and the values on the live production server using debug endpoints. The agent advised the user to redeploy multiple times.
-     - Next debug checklist: This is a persistent environmental problem. The next agent must assume that any fix requires a full, clean redeployment by the user. Before debugging any fixed but still broken issue, the first step should always be to use a debug endpoint to verify that the deployed code and configuration match the intended changes.
-     - Why fix this issue and what will be achieved with the fix? Resolving the deployment inconsistency is key to making any bug fix or feature deployment successful and stable.
-     - Status:  IN PROGRESS
+  - Issue 4: 
+     - Attempted fixes: In the previous session, the agent implemented fixes for a duplicate key error on .
+     - Next debug checklist:
+        1.  This can only be tested after the production deployment is successful.
+        2.  Perform an end-to-end test of submitting a new loan application on the production domain.
+     - Why fix this issue and what will be achieved with the fix? It will fix the application's core functionality on production.
+     - Status:  BLOCKED
      - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? both
-     - Blocked on other issue: Blocked on user action (ensuring clean deployments).
+     - Blocked on other issue: Issue 1: Critical Production Deployment Failure
 
 **In progress Task List**:
-  - Task 1:  Migrate payment provider from Xixapay to BudPay (P0)
-     - Where to resume: Start by calling the  for BudPay. Then, locate the Xixapay integration logic in  and replace it with the BudPay implementation. Update the  file with the provided  and  keys.
-     - What will be achieved with this? The application's payment functionality will be migrated to the user's preferred provider.
-     - Status:  NOT STARTED
-     - Should Test frontend/backend/both after fix? both
-     - Blocked on something: None
+(None)
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - (P0) Full regression testing of the entire application after the BudPay migration, Resend migration, and submission bug are all resolved.
-    - (P1) **Security Cleanup:** Remove all temporary debug endpoints created during this session from  and  (e.g., , , , ).
+    - (P0) Full regression testing of the entire application after the production deployment is successful.
+    - (P1) Complete the SendGrid to Resend email migration and test all email functionalities.
+    - (P2) **Security Cleanup:** Remove all temporary debug endpoints from the previous session (, , etc.).
+    Future Tasks:
+    - (P2) Refactor  to remove any dead code from the OTPay integration.
+    - (P2) Refactor the Withdrawal tab in  to be conditionally rendered based on the payment provider's capabilities, instead of being a static placeholder.
 
 **Completed work in this session**
-- **Code Refactoring:**
-  - Completed a comprehensive code review and fixed over 25 linting errors across the frontend and backend.
-  - Removed several insecure, temporary admin endpoints from the previous session (, , etc.) in .
+- **Payment Gateway Management:**
+  - Integrated BudPay payment gateway, replacing Xixapay.
+  - Integrated OTPay payment gateway (virtual account flow), replacing BudPay.
+  - Re-integrated BudPay, replacing OTPay, and updated to latest API keys.
+- **Webhook Security:**
+  - Implemented a comprehensive, reusable webhook security module in .
+  - Added HMAC signature verification, IP logging, and audit logging to the webhook endpoint.
+  - Created documentation for the security implementation in .
 - **Feature Implementation:**
-  - Implemented a full loan disbursement workflow, including admin approve/decline buttons and corresponding email notifications (, ).
-  - Added a CBN Licensed section with images to the About Us page ().
-  - Added a detailed submission timestamp (date and time) to the admin dashboard ().
-- **Bug Fixes:**
-  - Fixed the Image not found error in the admin dashboard by implementing a robust filename sanitization (), creating a dedicated document-serving endpoint (), and a database cleanup script.
-  - Fixed a UI bug causing the date and time in the admin dashboard to display on a single line.
+  - Added an admin withdrawal feature (bank list, account verification, withdrawal submission, history) for OTPay in .
+  - Disabled the withdrawal feature with a placeholder message upon reverting to BudPay.
+- **Bug Fixing & Debugging:**
+  - Diagnosed and fixed a JSON parsing error with the OTPay API response that contained a non-JSON prefix.
+  - Resolved a user-facing admin login issue by reverting  to use the working preview URL.
+  - Attempted to fix production deployment failures by making the DB connection () and config loading () more resilient.
+- **User Account Management:**
+  - Successfully changed the admin password for  to .
 
 **Earlier issues found/mentioned but not fixed**
-   - The core application submission bug persists on the production server, despite multiple fixes that work successfully in the preview environment. This is captured in All Pending/In progress Issue list.
+   - The core application submission bug and the incomplete SendGrid-to-Resend email migration persist from the previous fork and were not fully resolved.
 
 **Known issue recurrence from previous fork**
-  - The issue of the production deployment being out of sync with the preview environment, which was noted in the previous handoff summary, has been a major and recurring blocker throughout this entire session.
+  - The production deployment being out of sync with the preview environment remains the primary and most critical blocker.
 
 **Code Architecture**
 
@@ -106,76 +121,76 @@ A full-stack application with a React frontend and FastAPI backend. It features 
 - **Frontend**: React, React Router, Axios, TailwindCSS.
 - **Backend**: FastAPI, Pydantic, Motor (async MongoDB driver), JWT.
 - **Database**: MongoDB.
-- **Integrations**: SendGrid (being replaced), Resend (in progress), Xixapay (to be replaced), BudPay (newly requested).
+- **Payment Flows**: Handled both checkout-based (BudPay) and virtual account-based (OTPay) payment systems.
+- **Webhook Security**: Implemented HMAC signature verification and other best practices for securing webhooks.
 
 **key DB schema**
   - **users**: , , , , 
-  - **applications**: ,  (e.g., 'pending_payment', 'deposit_paid'),  (e.g., 'pending', 'approved', 'declined'), , , , ,  (with , ), , , .
-  - **password_resets**: , , 
+  - **applications**: , , , , , .
+  - **transactions**: , , , , , , .
 
 **changes in tech stack**
+  - **Payment Provider**: Cycled through Xixapay -> BudPay -> OTPay -> BudPay. The active provider is **BudPay**.
   - **Email Provider**: Migrating from SendGrid to Resend (In Progress).
-  - **Payment Provider**: Migrating from Xixapay to BudPay (Not Started).
 
 **All files of reference**
-- : Heavily modified with multiple attempts to fix the submission bug, including new ID generation logic and extensive logging.
-- : Modified to add loan disbursement endpoints, a document serving endpoint, and several temporary cleanup/debug endpoints.
-- : Modified to add CORS settings and several temporary global debug endpoints.
-- : Partially refactored to support both SendGrid and Resend.
-- : Contains the Xixapay logic that needs to be replaced with BudPay.
-- : Updated with disbursement buttons, document viewing logic, and timestamp display.
-- : The entry point for the failing submission flow.
-- : Updated with new API keys for Resend and needs updating for BudPay.
+- : Heavily modified due to switching between BudPay and OTPay.
+- : New file containing reusable webhook security logic.
+- : Modified to handle both checkout and virtual account UI flows.
+- : Modified to add and then disable the withdrawal feature.
+- : Updated with more resilient connection logic to fix deployment issues.
+- : Updated to handle missing environment variables more gracefully.
+- : Keys for BudPay and OTPay were added/changed.  is set to the production domain.
+- :  is set to the preview URL to allow for testing.
 
 **Areas that need refactoring**:
-- **Security:** A significant number of temporary debug endpoints have been added to , , and . These MUST be removed before considering the job complete.
-- **Code Complexity:**  has become very complex due to repeated, layered fixes. It would benefit from a review and simplification once the production bug is resolved.
+- The Withdrawal tab in  is a static placeholder. It should be removed or conditionally rendered based on the active payment provider's capabilities.
+- The  router likely contains unused code from the OTPay integration and should be cleaned up.
+- A significant number of temporary debug endpoints from the previous fork still exist and must be removed.
 
 **key api endpoints**
-- : Approves/declines a loan.
-- : New robust endpoint for serving document files.
-- : (Temporary) Cleans users without applications.
-- : (Temporary) Fixes bad document URLs in the database.
-- : (Temporary) Checks server config and status.
-- : (Temporary) Tests file upload functionality.
-- : (Temporary) Retrieves global uncaught errors.
-- : (Temporary) Retrieves errors specific to application submission.
+- : Initiates payment (currently with BudPay).
+- : Secure endpoint for receiving payment status updates from the provider.
+- , : Endpoints for the OTPay withdrawal feature, currently unused but still in the code.
 
 **Critical Info for New Agent**
-- **Start with the BudPay migration.** This is the user's latest and most explicit request.
-- **The application submission bug is your highest priority after the BudPay task.** The root cause is almost certainly a production environment issue (outdated deployment, incorrect env vars, or permissions). Your fixes in preview will not work until the user properly redeploys. Do not spend time on complex code changes before verifying the production environment's state with a debug endpoint. The last successful debug revealed a **** for , which was fixed with new ID logic, but this fix has likely not been deployed correctly.
-- **The SendGrid to Resend migration is half-done.** After BudPay, you must finish refactoring  to use the new service.
-- **Plan to remove all temporary debug endpoints** once the critical bugs are resolved and verified by the user on production.
+- **The #1 priority is the production deployment failure.** The user cannot use their app on their custom domain. Your first action should be to ask the user to redeploy the app to see if the latest fixes (resilient DB connection) have worked. Analyze the deployment logs if it fails again.
+- **The frontend and backend URLs are intentionally out of sync.** The frontend () points to the **preview URL** so the user can test. The backend () points to the **production URL** (). Do not change the frontend URL until the production deployment is confirmed to be 100% working.
+- **The user frequently changes requirements, especially for payment providers.** Always confirm your plan before implementing major changes.
+- The admin credentials were updated. **Email:** , **Password:** .
 
 **documents and test reports created in this job**
--  was updated for regression testing.
+- 
+- 
+-  (BudPay Integration Test)
+-  (OTPay Integration Test)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10.  - **New Task:** User requested to switch payment providers from Xixapay to BudPay. (Not Started)
-9.   - **In Progress:** User provided the Resend API key for the email service migration.
-8.   - User agreed to switch email providers.
-7.   - User disputed the credits exceeded error from SendGrid.
-6.   - User provided a new SendGrid key, which also failed.
-5.   - **In Progress:** User reported emails are not being sent.
-4.   - **In Progress:** User reported that the document image fix did not work on production.
-3.   - **Completed:** User requested two features for the admin dashboard.
-2.   - **In Progress:** User confirmed the application submission fix did not work after redeployment.
-1.   - **In Progress:** User reported a new error message during application submission, indicating orphaned user records.
+10.  - User confirmed the login works on the preview URL after the agent reverted the frontend .env. (Completed)
+9.   - User reported login failure. (Resolved)
+8.   - User provided deployment error logs and asked for a fix. (In Progress)
+7.   - User requested a list of all environment variables. (Completed)
+6.   - User requested an admin password change. (Completed)
+5.   - User reported issues logging in as admin. (In Progress)
+4.   - User asked for help with the custom domain issue. (Agent advised contacting support)
+3.   - User requested to revert the payment gateway from OTPay back to BudPay. (Completed)
+2.   - User requested to configure the app for the production domain. (Completed, but led to issues)
+1.   - User reported the main deployment issue. (In Progress)
 
 **Project Health Check:**
-- **Broken**: The application's core feature—submitting a loan application—is non-functional on the live production server. This is a critical failure. Email notifications are also broken.
+- **Broken**: The application cannot be deployed to the user's production domain, rendering it unusable for end-users. This is a critical failure state.
 
 **3rd Party Integrations**
-- **Xixapay** (Payments) — to be replaced by BudPay.
-- **SendGrid** (Emails) — being replaced by Resend due to account credit issues.
-- **Resend** (Emails) — In-progress integration, requires user-provided API key.
-- **BudPay** (Payments) — Newly requested integration, requires user-provided API keys.
+- **BudPay** (Payments) — Active. Keys are in .
+- **OTPay** (Payments) — Inactive. Integration code exists but is not used. Keys are in .
+- **Resend** (Emails) — In-progress integration. Key is in .
+- **SendGrid** (Emails) — Deprecated, but keys and some code remain.
 
 **Testing status**
-  - Testing agent used after significant changes: YES
-  - Troubleshoot agent used after agent stuck in loop: YES
+  - Testing agent used after significant changes: YES (for both BudPay and OTPay integrations)
+  - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: The entire production deployment is unreliable and does not reflect the state of the preview environment, causing features that pass testing to fail in production.
+  - Known regressions: Production deployment is completely broken.
 
 **Credentials to test flow:**
 - **Admin User**:
@@ -183,5 +198,7 @@ A full-stack application with a React frontend and FastAPI backend. It features 
     *   Password: 
 
 **What agent forgot to execute**
-- The agent was interrupted by the BudPay migration request and did not complete the SendGrid-to-Resend email migration.
-- The agent created numerous temporary debug endpoints throughout the session but did not create a final plan to remove them. This is now listed as an Upcoming Task.</analysis>
+- The agent did not complete the SendGrid-to-Resend email migration.
+- The agent did not remove the temporary debug endpoints from the previous session.
+- The agent did not clean up the now-disabled Withdrawal feature code in the  component.
+- The agent left an inconsistency where  points to the production URL while  points to the preview URL. While intentional for testing, this needs to be reconciled once the deployment is fixed.</analysis>

@@ -95,7 +95,7 @@ class TestBudPayPaymentEndpoints:
             "customer_name": test_app.get("full_name", "Test User"),
             "customer_phone": test_app.get("phone", "08012345678"),
             "amount": 2500,
-            "redirect_url": "https://cashflow-patch.preview.emergentagent.com/payment-callback"
+            "redirect_url": "https://budpay-mfb.preview.emergentagent.com/payment-callback"
         }
         
         response = self.session.post(f"{BASE_URL}/api/payments/initiate", json=payload)
@@ -223,7 +223,7 @@ class TestBudPayPaymentEndpoints:
             "customer_name": test_app.get("full_name", "Test User"),
             "customer_phone": test_app.get("phone", "08012345678"),
             "amount": 2500,
-            "redirect_url": "https://cashflow-patch.preview.emergentagent.com/payment-callback"
+            "redirect_url": "https://budpay-mfb.preview.emergentagent.com/payment-callback"
         }
         
         init_response = self.session.post(f"{BASE_URL}/api/payments/initiate", json=init_payload)
@@ -346,7 +346,7 @@ class TestPaymentFlowIntegration:
             "customer_name": test_app.get("full_name", "Test User"),
             "customer_phone": test_app.get("phone", "08012345678"),
             "amount": 2500,
-            "redirect_url": "https://cashflow-patch.preview.emergentagent.com/payment-callback"
+            "redirect_url": "https://budpay-mfb.preview.emergentagent.com/payment-callback"
         }
         
         init_response = self.session.post(f"{BASE_URL}/api/payments/initiate", json=init_payload)
