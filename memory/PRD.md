@@ -13,7 +13,7 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 - **Backend**: FastAPI (Python), Motor (async MongoDB)
 - **Database**: MongoDB
 - **Email**: Resend (primary), SendGrid (fallback)
-- **Payments**: BudPay (migrated from Xixapay)
+- **Payments**: BudPay (checkout flow)
 
 ## Core Features
 
