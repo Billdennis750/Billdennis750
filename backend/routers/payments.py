@@ -7,11 +7,12 @@ from utils.webhook_security import (
     verify_webhook_security,
     log_webhook_event,
     get_client_ip,
-    WebhookSecurityError
 )
 from datetime import datetime, timezone
 import httpx
 import logging
+import hmac
+import hashlib
 import json
 import uuid
 
@@ -20,16 +21,13 @@ settings = get_settings()
 router = APIRouter(prefix="/api/payments", tags=["payments"])
 
 # ============================================================================
-# OTPAY CONFIGURATION
+# BUDPAY CONFIGURATION
 # ============================================================================
-OTPAY_BASE_URL = "https://otpay.ng/api/v1"
-
-# OTPay Official Webhook IPs (from their documentation)
-OTPAY_WEBHOOK_IPS = {"185.31.40.25", "2a00:b6e0:1:20:16::1"}
+BUDPAY_BASE_URL = "https://api.budpay.com/api/v2"
 
 # Webhook security settings
-REQUIRE_WEBHOOK_SIGNATURE = False  # OTPay uses IP allowlisting instead
-REQUIRE_IP_ALLOWLIST = True  # Enable for production
+REQUIRE_WEBHOOK_SIGNATURE = False  # Enable when BudPay provides signatures
+REQUIRE_IP_ALLOWLIST = False  # Enable after configuring BUDPAY_WEBHOOK_IPS
 
 
 # ============================================================================
@@ -42,30 +40,21 @@ class PaymentInitiate(BaseModel):
     customer_name: str
     customer_phone: str = ""
     amount: float = 2500
-    redirect_url: str = ""
+    redirect_url: str
 
 
 class PaymentVerify(BaseModel):
     order_ref: str
 
 
-class VirtualAccountCreate(BaseModel):
-    application_id: str
-    customer_email: str
-    customer_name: str
-    customer_phone: str
-    amount: float = 2500
-
-
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
-def get_otpay_headers():
-    """Get OTPay API headers with authentication"""
+def get_budpay_headers():
+    """Get BudPay API headers with authentication"""
     return {
-        "api-key": settings.otpay_api_key,
-        "secret-key": settings.otpay_secret_key,
+        "Authorization": f"Bearer {settings.budpay_secret_key}",
         "Content-Type": "application/json"
     }
 
@@ -77,14 +66,14 @@ def get_otpay_headers():
 @router.post("/initiate", response_model=dict)
 async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
     """
-    Initiate a payment by creating a virtual account with OTPay.
+    Initiate a payment transaction with BudPay Standard Checkout.
     
-    OTPay Flow:
-    1. Create a virtual account for the customer
-    2. Return virtual account details (bank name, account number)
-    3. Customer transfers the exact amount to the virtual account
-    4. OTPay sends webhook notification when payment is received
-    5. Our webhook handler updates the application status
+    BudPay Flow:
+    1. Initialize transaction with amount and customer details
+    2. Return checkout URL for customer to complete payment
+    3. Customer pays via card, bank transfer, or USSD
+    4. BudPay redirects to callback URL with payment status
+    5. Webhook notification confirms payment
     """
     try:
         # Verify application exists
@@ -95,130 +84,74 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                 detail="Application not found"
             )
         
-        # Check if virtual account already exists for this application
-        existing_va = await db.virtual_accounts.find_one({
-            "application_id": payment.application_id,
-            "status": "active"
-        })
-        
-        if existing_va:
-            # Return existing virtual account
-            return {
-                "status": "success",
-                "payment_type": "bank_transfer",
-                "virtual_account": {
-                    "account_number": existing_va["account_number"],
-                    "account_name": existing_va["account_name"],
-                    "bank_name": existing_va["bank_name"]
-                },
-                "amount": int(payment.amount),
-                "currency": "NGN",
-                "order_reference": existing_va["order_reference"],
-                "message": f"Transfer exactly ₦{int(payment.amount):,} to complete payment"
-            }
-        
         # Create unique order reference
         order_reference = f"CASHFLOW-{payment.application_id}-{uuid.uuid4().hex[:8]}"
         
         # Determine payment type
         is_processing_fee = payment.amount <= 2500
         
-        # Prepare OTPay virtual account creation payload
-        otpay_payload = {
-            "business_code": settings.otpay_business_code,
-            "phone": payment.customer_phone or "08000000000",
+        # Prepare BudPay Standard Checkout payload
+        budpay_payload = {
             "email": payment.customer_email,
-            "bank_code": [100033],  # PalmPay bank code
-            "name": payment.customer_name
+            "amount": str(int(payment.amount)),
+            "currency": "NGN",
+            "reference": order_reference,
+            "callback": payment.redirect_url
         }
         
-        logger.info(f"Creating OTPay virtual account: {otpay_payload}")
+        logger.info(f"Creating BudPay checkout: {budpay_payload}")
         
-        virtual_account = None
+        checkout_link = None
+        budpay_reference = None
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{OTPAY_BASE_URL}/create_virtual_account",
-                    headers=get_otpay_headers(),
-                    json=otpay_payload
+                    f"{BUDPAY_BASE_URL}/transaction/initialize",
+                    headers=get_budpay_headers(),
+                    json=budpay_payload
                 )
                 
-                logger.info(f"OTPay response status: {response.status_code}")
-                logger.info(f"OTPay response: {response.text}")
+                logger.info(f"BudPay response status: {response.status_code}")
+                logger.info(f"BudPay response: {response.text}")
                 
                 if response.status_code == 200:
-                    # OTPay sometimes returns response with a prefix before JSON
-                    # e.g., "22802830412{\"status\":true,...}"
-                    response_text = response.text
+                    budpay_response = response.json()
                     
-                    # Find the start of JSON object
-                    json_start = response_text.find('{')
-                    if json_start > 0:
-                        response_text = response_text[json_start:]
-                    
-                    otpay_response = json.loads(response_text)
-                    
-                    if otpay_response.get("status"):
-                        accounts = otpay_response.get("accounts", [])
-                        if accounts:
-                            account = accounts[0]
-                            virtual_account = {
-                                "ref": account.get("ref"),
-                                "account_number": account.get("number"),
-                                "account_name": account.get("name"),
-                                "bank_name": account.get("bank", "PALMPAY")
-                            }
-                            logger.info(f"OTPay virtual account created: {virtual_account}")
+                    if budpay_response.get("status"):
+                        data = budpay_response.get("data", {})
+                        checkout_link = data.get("authorization_url")
+                        budpay_reference = data.get("reference") or order_reference
+                        
+                        logger.info(f"BudPay checkout URL created: {checkout_link}")
                     else:
-                        error_msg = otpay_response.get("desc", "Unknown error")
-                        logger.error(f"OTPay API error: {error_msg}")
-                        raise Exception(f"OTPay error: {error_msg}")
+                        error_msg = budpay_response.get("message", "Unknown error")
+                        logger.error(f"BudPay API error: {error_msg}")
+                        raise Exception(f"BudPay error: {error_msg}")
                 else:
-                    logger.error(f"OTPay API error: {response.status_code} - {response.text}")
-                    raise Exception(f"OTPay API returned {response.status_code}")
+                    logger.error(f"BudPay API error: {response.status_code} - {response.text}")
+                    raise Exception(f"BudPay API returned {response.status_code}")
                     
         except httpx.TimeoutException:
-            logger.error("OTPay API timeout")
+            logger.error("BudPay API timeout")
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                 detail="Payment gateway timeout. Please try again."
             )
-        except Exception as otpay_error:
-            logger.error(f"OTPay virtual account creation failed: {str(otpay_error)}")
+        except Exception as budpay_error:
+            logger.error(f"BudPay payment initiation failed: {str(budpay_error)}")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Payment gateway error: {str(otpay_error)}"
+                detail=f"Payment gateway error: {str(budpay_error)}"
             )
         
-        if not virtual_account:
+        if not checkout_link:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Failed to create virtual account"
+                detail="Failed to create checkout link"
             )
         
-        # Store virtual account record
-        va_doc = {
-            "application_id": payment.application_id,
-            "order_reference": order_reference,
-            "otpay_ref": virtual_account["ref"],
-            "account_number": virtual_account["account_number"],
-            "account_name": virtual_account["account_name"],
-            "bank_name": virtual_account["bank_name"],
-            "customer_email": payment.customer_email,
-            "customer_name": payment.customer_name,
-            "customer_phone": payment.customer_phone,
-            "expected_amount": payment.amount,
-            "payment_type": "processing_fee" if is_processing_fee else "deposit",
-            "payment_method": "otpay_virtual_account",
-            "status": "active",
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc)
-        }
-        
-        await db.virtual_accounts.insert_one(va_doc)
-        
-        # Also create a transaction record
+        # Store transaction record
         transaction_doc = {
             "application_id": payment.application_id,
             "order_reference": order_reference,
@@ -226,12 +159,14 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             "customer_name": payment.customer_name,
             "amount": payment.amount,
             "currency": "NGN",
-            "virtual_account_number": virtual_account["account_number"],
-            "virtual_account_bank": virtual_account["bank_name"],
+            "budpay_reference": budpay_reference,
+            "checkout_link": checkout_link,
             "payment_type": "processing_fee" if is_processing_fee else "deposit",
-            "payment_method": "otpay",
-            "status": "pending",
+            "payment_method": "budpay",
+            "status": "initiated",
+            "transaction_reference": None,
             "webhook_received": False,
+            "webhook_verified": False,
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc)
         }
@@ -239,17 +174,12 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         await db.transactions.insert_one(transaction_doc)
         
         return {
-            "status": "success",
-            "payment_type": "bank_transfer",
-            "virtual_account": {
-                "account_number": virtual_account["account_number"],
-                "account_name": virtual_account["account_name"],
-                "bank_name": virtual_account["bank_name"]
-            },
-            "amount": int(payment.amount),
-            "currency": "NGN",
+            "checkout_link": checkout_link,
             "order_reference": order_reference,
-            "message": f"Transfer exactly ₦{int(payment.amount):,} to complete payment"
+            "status": "initiated",
+            "payment_type": "card",
+            "amount": int(payment.amount),
+            "currency": "NGN"
         }
         
     except HTTPException:
@@ -264,19 +194,10 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
 
 @router.post("/verify", response_model=dict)
 async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
-    """Verify payment status by querying transaction records"""
+    """Verify payment status with BudPay API"""
     try:
-        # Find transaction by order reference
+        # Find transaction
         transaction = await db.transactions.find_one({"order_reference": verify.order_ref})
-        
-        if not transaction:
-            # Try finding by virtual account
-            va = await db.virtual_accounts.find_one({"order_reference": verify.order_ref})
-            if va:
-                transaction = await db.transactions.find_one({
-                    "virtual_account_number": va["account_number"]
-                })
-        
         if not transaction:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -284,54 +205,67 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
             )
         
         payment_status = transaction.get("status", "pending")
+        transaction_reference = transaction.get("transaction_reference", "")
         
-        # If still pending, try to query OTPay for status
-        if payment_status == "pending" and transaction.get("transaction_reference"):
+        # If not completed, check with BudPay
+        if payment_status in ["initiated", "pending"]:
             try:
                 async with httpx.AsyncClient(timeout=15.0) as client:
-                    response = await client.post(
-                        f"{OTPAY_BASE_URL}/query_transaction",
-                        headers=get_otpay_headers(),
-                        json={
-                            "business_code": settings.otpay_business_code,
-                            "order_no": transaction.get("transaction_reference")
-                        }
+                    response = await client.get(
+                        f"{BUDPAY_BASE_URL}/transaction/verify/{verify.order_ref}",
+                        headers=get_budpay_headers()
                     )
                     
+                    logger.info(f"BudPay verify response: {response.status_code} - {response.text}")
+                    
                     if response.status_code == 200:
-                        # Handle OTPay response with potential prefix
-                        response_text = response.text
-                        json_start = response_text.find('{')
-                        if json_start > 0:
-                            response_text = response_text[json_start:]
+                        budpay_data = response.json()
                         
-                        otpay_data = json.loads(response_text)
-                        if otpay_data.get("status") and otpay_data.get("data"):
-                            data = otpay_data["data"]
-                            if data.get("status") == "sent":
-                                payment_status = "completed"
-                                
-                                # Update transaction
-                                await db.transactions.update_one(
-                                    {"order_reference": verify.order_ref},
-                                    {"$set": {
-                                        "status": "completed",
-                                        "updated_at": datetime.now(timezone.utc)
-                                    }}
-                                )
-                                
-                                # Process successful payment
-                                await process_successful_payment(transaction, db)
-                                
-            except Exception as query_error:
-                logger.warning(f"OTPay query failed: {str(query_error)}")
+                        if budpay_data.get("status"):
+                            data = budpay_data.get("data", {})
+                            
+                            # Map BudPay status
+                            budpay_status = str(data.get("status", "")).lower()
+                            status_map = {
+                                "success": "completed",
+                                "successful": "completed",
+                                "completed": "completed",
+                                "approved": "completed",
+                                "paid": "completed",
+                                "pending": "pending",
+                                "processing": "pending",
+                                "failed": "failed",
+                                "cancelled": "failed",
+                                "abandoned": "failed",
+                                "expired": "failed"
+                            }
+                            payment_status = status_map.get(budpay_status, payment_status)
+                            transaction_reference = data.get("reference") or data.get("transaction_reference") or transaction_reference
+                            
+            except Exception as verify_error:
+                logger.warning(f"BudPay status check failed: {str(verify_error)}")
+        
+        # Update transaction if status changed
+        if payment_status != transaction.get("status"):
+            await db.transactions.update_one(
+                {"order_reference": verify.order_ref},
+                {"$set": {
+                    "status": payment_status,
+                    "transaction_reference": transaction_reference,
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+            
+            # Update application if payment successful
+            if payment_status == "completed":
+                await process_successful_payment(transaction, db)
         
         return {
             "payment_status": payment_status,
-            "transaction_reference": transaction.get("transaction_reference", ""),
-            "amount": transaction.get("amount"),
-            "application_id": transaction.get("application_id"),
-            "payment_type": transaction.get("payment_type", "bank_transfer"),
+            "transaction_reference": transaction_reference,
+            "amount": transaction["amount"],
+            "application_id": transaction["application_id"],
+            "payment_type": transaction.get("payment_type", "card"),
             "message": f"Payment {payment_status}"
         }
         
@@ -346,174 +280,132 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
 
 
 @router.post("/webhook")
-async def otpay_webhook(request: Request, db=Depends(get_db)):
+async def budpay_webhook(request: Request, db=Depends(get_db)):
     """
-    Handle OTPay payment webhooks with comprehensive security.
+    Handle BudPay payment webhooks.
     
     Security measures:
-    1. IP Allowlisting (OTPay IPs: 185.31.40.25, 2a00:b6e0:1:20:16::1)
-    2. TLS/HTTPS enforcement
-    3. Rate limiting
-    4. Audit logging
+    1. HMAC signature verification (when configured)
+    2. IP allowlisting (when configured)
+    3. Audit logging
     
-    OTPay sends webhooks when:
-    - Payment is received to a virtual account
+    BudPay sends webhooks when:
+    - Payment is successful (charge.success)
+    - Payment fails (charge.failed)
     """
     client_ip = get_client_ip(request)
-    transaction_ref = "unknown"
+    order_ref = "unknown"
     
     try:
-        # ================================================================
-        # STEP 1: IP Allowlist Verification (OTPay specific)
-        # ================================================================
-        if REQUIRE_IP_ALLOWLIST:
-            if client_ip not in OTPAY_WEBHOOK_IPS:
-                logger.warning(f"Webhook from unauthorized IP: {client_ip}. Allowed: {OTPAY_WEBHOOK_IPS}")
-                log_webhook_event(request, client_ip, "unknown", "ip_rejected", {
-                    "allowed_ips": list(OTPAY_WEBHOOK_IPS)
-                })
+        # Get raw body
+        body = await request.body()
+        
+        # Verify webhook signature if configured
+        signature = request.headers.get("x-budpay-signature") or request.headers.get("budpay-signature")
+        
+        if signature and settings.budpay_secret_key and REQUIRE_WEBHOOK_SIGNATURE:
+            expected_signature = hmac.new(
+                settings.budpay_secret_key.encode('utf-8'),
+                body,
+                hashlib.sha512
+            ).hexdigest()
+            
+            if not hmac.compare_digest(signature.lower(), expected_signature.lower()):
+                logger.warning(f"Invalid BudPay webhook signature from {client_ip}")
+                log_webhook_event(request, client_ip, "unknown", "invalid_signature", {})
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Unauthorized IP address"
+                    detail="Invalid webhook signature"
                 )
         
-        # ================================================================
-        # STEP 2: Parse Webhook Payload
-        # ================================================================
-        body = await request.body()
+        # Parse webhook data
         webhook_data = json.loads(body)
+        logger.info(f"Received BudPay webhook from {client_ip}: {webhook_data}")
         
-        logger.info(f"Received OTPay webhook from {client_ip}: {webhook_data}")
+        # Extract event type and data
+        event_type = (
+            webhook_data.get("notifyType") or 
+            webhook_data.get("event") or 
+            webhook_data.get("notify") or
+            "unknown"
+        )
         
-        # Extract OTPay webhook fields
-        # OTPay webhook format:
-        # {
-        #   "email": "test@gmail.com",
-        #   "phone": "09012345678",
-        #   "business_code": "XXX",
-        #   "account_number": "XXXXXXXXXX",
-        #   "customer_account_name": "Name - [TEST](OT-PAY)",
-        #   "customer_account_bank": "PALMPAY",
-        #   "amount": 200,
-        #   "date": "2025-01-01 17:26:46",
-        #   "transaction_reference": "MIXXXXXXXXXXXXXXXXX",
-        #   "customer_senderbankname": "OPAY",
-        #   "customer_senderaccountnumber": "****1234",
-        #   "customer_sendername": "PERFECT TEST"
-        # }
+        event_data = webhook_data.get("data", webhook_data)
         
-        account_number = webhook_data.get("account_number")
-        transaction_ref = webhook_data.get("transaction_reference", "unknown")
-        amount = webhook_data.get("amount", 0)
-        sender_name = webhook_data.get("customer_sendername", "")
-        sender_bank = webhook_data.get("customer_senderbankname", "")
+        # Extract reference
+        order_ref = (
+            event_data.get("reference") or
+            event_data.get("tx_ref") or
+            event_data.get("merchantTransactionRef") or
+            webhook_data.get("reference")
+        )
         
-        if not account_number:
-            logger.warning(f"OTPay webhook missing account_number from {client_ip}")
-            log_webhook_event(request, client_ip, transaction_ref, "missing_account", {})
-            return {"status": "ok", "message": "No account number provided"}
+        transaction_status = str(event_data.get("status") or webhook_data.get("status") or "").lower()
+        transaction_id = event_data.get("id") or event_data.get("transaction_id")
+        amount_paid = event_data.get("amount") or event_data.get("charged_amount")
         
-        # ================================================================
-        # STEP 3: Find Virtual Account and Transaction
-        # ================================================================
-        virtual_account = await db.virtual_accounts.find_one({
-            "account_number": account_number,
-            "status": "active"
-        })
+        if not order_ref:
+            logger.warning(f"BudPay webhook missing order reference from {client_ip}")
+            log_webhook_event(request, client_ip, "missing", "rejected", {})
+            return {"status": "ok", "message": "No order reference provided"}
         
-        if not virtual_account:
-            logger.warning(f"Virtual account not found: {account_number} from {client_ip}")
-            log_webhook_event(request, client_ip, transaction_ref, "account_not_found", {
-                "account_number": account_number
-            })
-            return {"status": "ok", "message": "Virtual account not found"}
-        
-        # Find or create transaction
-        transaction = await db.transactions.find_one({
-            "virtual_account_number": account_number,
-            "status": "pending"
-        })
+        # Find transaction
+        transaction = await db.transactions.find_one({"order_reference": order_ref})
+        if not transaction:
+            transaction = await db.transactions.find_one({"budpay_reference": order_ref})
         
         if not transaction:
-            # Create new transaction record from webhook
-            transaction = {
-                "application_id": virtual_account["application_id"],
-                "order_reference": virtual_account["order_reference"],
-                "customer_email": virtual_account["customer_email"],
-                "customer_name": virtual_account["customer_name"],
-                "amount": virtual_account["expected_amount"],
-                "virtual_account_number": account_number,
-                "payment_type": virtual_account["payment_type"],
-                "payment_method": "otpay"
-            }
+            logger.warning(f"Transaction not found for webhook: {order_ref} from {client_ip}")
+            log_webhook_event(request, client_ip, order_ref, "not_found", {})
+            return {"status": "ok", "message": "Transaction not found"}
         
-        # ================================================================
-        # STEP 4: Validate Amount
-        # ================================================================
-        expected_amount = virtual_account.get("expected_amount", 0)
-        if amount < expected_amount:
-            logger.warning(
-                f"Partial payment received: ₦{amount} of ₦{expected_amount} "
-                f"for account {account_number}"
-            )
-            # Still process but log warning
+        # Map webhook status
+        status_map = {
+            "success": "completed",
+            "successful": "completed",
+            "completed": "completed",
+            "approved": "completed",
+            "paid": "completed",
+            "failed": "failed",
+            "cancelled": "failed",
+            "abandoned": "failed",
+            "expired": "failed"
+        }
+        payment_status = status_map.get(transaction_status, "pending")
         
-        # ================================================================
-        # STEP 5: Update Transaction Record
-        # ================================================================
+        # Update transaction
         update_data = {
-            "status": "completed",
-            "transaction_reference": transaction_ref,
-            "amount_received": amount,
-            "sender_name": sender_name,
-            "sender_bank": sender_bank,
+            "status": payment_status,
             "webhook_received": True,
+            "webhook_verified": True,
             "webhook_ip": client_ip,
-            "webhook_data": webhook_data,
             "updated_at": datetime.now(timezone.utc)
         }
         
+        if transaction_id:
+            update_data["transaction_reference"] = str(transaction_id)
+        if amount_paid:
+            update_data["amount_paid"] = float(amount_paid)
+            
         await db.transactions.update_one(
-            {"virtual_account_number": account_number, "status": "pending"},
-            {"$set": update_data},
-            upsert=True
+            {"order_reference": transaction["order_reference"]},
+            {"$set": update_data}
         )
         
-        # Mark virtual account as used
-        await db.virtual_accounts.update_one(
-            {"account_number": account_number},
-            {"$set": {
-                "status": "completed",
-                "transaction_reference": transaction_ref,
-                "updated_at": datetime.now(timezone.utc)
-            }}
-        )
+        # Process successful payment
+        if payment_status == "completed":
+            await process_successful_payment(transaction, db)
         
-        # ================================================================
-        # STEP 6: Process Successful Payment
-        # ================================================================
-        await process_successful_payment(transaction, db)
-        
-        # ================================================================
-        # STEP 7: Log Success
-        # ================================================================
-        log_webhook_event(
-            request=request,
-            client_ip=client_ip,
-            reference=transaction_ref,
-            status="success",
-            details={
-                "account_number": account_number,
-                "amount": amount,
-                "sender": sender_name
-            }
-        )
+        log_webhook_event(request, client_ip, order_ref, "success", {
+            "event_type": event_type,
+            "payment_status": payment_status
+        })
         
         return {"status": "success", "message": "Webhook processed"}
         
     except json.JSONDecodeError:
         logger.error(f"Invalid JSON in webhook payload from {client_ip}")
-        log_webhook_event(request, client_ip, transaction_ref, "invalid_json", {})
+        log_webhook_event(request, client_ip, order_ref, "invalid_json", {})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid JSON payload"
@@ -522,7 +414,7 @@ async def otpay_webhook(request: Request, db=Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"Webhook processing error from {client_ip}: {str(e)}")
-        log_webhook_event(request, client_ip, transaction_ref, "error", {"error": str(e)})
+        log_webhook_event(request, client_ip, order_ref, "error", {"error": str(e)})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Webhook processing failed"
@@ -543,12 +435,9 @@ async def process_successful_payment(transaction: dict, db):
             logger.warning(f"Application not found for payment: {application_id}")
             return
         
-        # Determine payment type
-        payment_type = transaction.get("payment_type", "")
         amount = transaction.get("amount", 0)
-        
-        is_processing_fee = payment_type == "processing_fee" or amount <= 2500
-        is_deposit = payment_type == "deposit" or amount >= 3000
+        is_processing_fee = amount <= 2500
+        is_deposit = amount >= 3000
         
         app_update = {
             "updated_at": datetime.now(timezone.utc)
@@ -563,7 +452,6 @@ async def process_successful_payment(transaction: dict, db):
             
             logger.info(f"Application {application_id} - Processing fee marked as paid")
             
-            # Send payment confirmation email
             try:
                 await email_service.send_payment_confirmation(
                     application.get("email"),
@@ -583,9 +471,8 @@ async def process_successful_payment(transaction: dict, db):
             app_update["status"] = "deposit_paid"
             app_update["disbursement_status"] = "pending"
             
-            logger.info(f"Application {application_id} - Deposit marked as paid, awaiting disbursement approval")
+            logger.info(f"Application {application_id} - Deposit marked as paid")
             
-            # Send deposit confirmation email
             try:
                 await email_service.send_deposit_confirmed(
                     application.get("email"),
@@ -596,7 +483,7 @@ async def process_successful_payment(transaction: dict, db):
             except Exception as email_error:
                 logger.error(f"Failed to send deposit email: {email_error}")
         
-        if len(app_update) > 1:  # More than just updated_at
+        if len(app_update) > 1:
             await db.applications.update_one(
                 {"application_id": application_id},
                 {"$set": app_update}
@@ -620,322 +507,9 @@ async def get_transaction(order_ref: str, db=Depends(get_db)):
             detail="Transaction not found"
         )
     
-    # Convert datetime objects to ISO strings
     if transaction.get("created_at"):
         transaction["created_at"] = transaction["created_at"].isoformat()
     if transaction.get("updated_at"):
         transaction["updated_at"] = transaction["updated_at"].isoformat()
     
     return transaction
-
-
-@router.get("/virtual-account/{application_id}")
-async def get_virtual_account(application_id: str, db=Depends(get_db)):
-    """Get virtual account details for an application"""
-    va = await db.virtual_accounts.find_one(
-        {"application_id": application_id, "status": "active"},
-        {"_id": 0}
-    )
-    
-    if not va:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No active virtual account found for this application"
-        )
-    
-    # Convert datetime objects
-    if va.get("created_at"):
-        va["created_at"] = va["created_at"].isoformat()
-    if va.get("updated_at"):
-        va["updated_at"] = va["updated_at"].isoformat()
-    
-    return va
-
-
-# ============================================================================
-# PAYOUT/WITHDRAWAL ENDPOINTS (Admin Only)
-# ============================================================================
-
-class BankAccountVerify(BaseModel):
-    bank_code: str
-    account_number: str
-
-
-class PayoutRequest(BaseModel):
-    bank_code: str
-    account_number: str
-    account_name: str
-    amount: float
-    narration: str = "Cashflow MFB Withdrawal"
-
-
-@router.get("/banks")
-async def get_banks():
-    """Get list of available banks for payout"""
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f"{OTPAY_BASE_URL}/get_banks",
-                headers={"api-key": settings.otpay_api_key}
-            )
-            
-            logger.info(f"OTPay get_banks response: {response.status_code}")
-            
-            if response.status_code == 200:
-                # Handle OTPay response with potential prefix and multiple JSON arrays
-                response_text = response.text
-                
-                # Find the first JSON array or object
-                json_start = response_text.find('[')
-                if json_start == -1:
-                    json_start = response_text.find('{')
-                if json_start > 0:
-                    response_text = response_text[json_start:]
-                
-                # OTPay sometimes returns multiple JSON arrays concatenated
-                # Find where the first array ends
-                if response_text.startswith('['):
-                    bracket_count = 0
-                    end_index = 0
-                    for i, char in enumerate(response_text):
-                        if char == '[':
-                            bracket_count += 1
-                        elif char == ']':
-                            bracket_count -= 1
-                            if bracket_count == 0:
-                                end_index = i + 1
-                                break
-                    if end_index > 0:
-                        response_text = response_text[:end_index]
-                
-                banks_data = json.loads(response_text)
-                
-                # If it's a list, return directly
-                if isinstance(banks_data, list):
-                    return {"status": True, "banks": banks_data}
-                
-                # If it has status field
-                if banks_data.get("status"):
-                    return {"status": True, "banks": banks_data.get("data", banks_data.get("banks", []))}
-                
-                return {"status": True, "banks": banks_data}
-            else:
-                logger.error(f"OTPay get_banks error: {response.status_code} - {response.text}")
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Failed to fetch banks list"
-                )
-                
-    except httpx.TimeoutException:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Bank list request timed out"
-        )
-    except Exception as e:
-        logger.error(f"Get banks error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch banks: {str(e)}"
-        )
-
-
-@router.post("/verify-account")
-async def verify_bank_account(account: BankAccountVerify):
-    """Verify bank account details before payout"""
-    try:
-        payload = {
-            "business_code": settings.otpay_business_code,
-            "bank_account_no": account.account_number,
-            "bank_code": account.bank_code
-        }
-        
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{OTPAY_BASE_URL}/query_bank_account",
-                headers=get_otpay_headers(),
-                json=payload
-            )
-            
-            logger.info(f"OTPay verify account response: {response.status_code}")
-            logger.info(f"OTPay verify account: {response.text}")
-            
-            if response.status_code == 200:
-                # Handle OTPay response with potential prefix
-                response_text = response.text
-                json_start = response_text.find('{')
-                if json_start > 0:
-                    response_text = response_text[json_start:]
-                
-                result = json.loads(response_text)
-                
-                if result.get("status"):
-                    return {
-                        "status": True,
-                        "account_number": result.get("account_number"),
-                        "account_name": result.get("account_name"),
-                        "bank_name": result.get("bank_name")
-                    }
-                else:
-                    return {
-                        "status": False,
-                        "message": result.get("desc", "Account verification failed")
-                    }
-            else:
-                logger.error(f"OTPay verify account error: {response.status_code}")
-                return {
-                    "status": False,
-                    "message": "Account verification failed"
-                }
-                
-    except httpx.TimeoutException:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Account verification timed out"
-        )
-    except Exception as e:
-        logger.error(f"Verify account error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Account verification failed: {str(e)}"
-        )
-
-
-@router.post("/payout")
-async def initiate_payout(payout: PayoutRequest, db=Depends(get_db)):
-    """
-    Initiate a payout/withdrawal from OTPay wallet to a bank account.
-    Admin only endpoint.
-    """
-    try:
-        # Validate amount
-        if payout.amount < 100:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Minimum withdrawal amount is ₦100"
-            )
-        
-        # Create payout reference
-        payout_reference = f"PAYOUT-{uuid.uuid4().hex[:12].upper()}"
-        
-        payload = {
-            "business_code": settings.otpay_business_code,
-            "bank_account_no": payout.account_number,
-            "bank_code": payout.bank_code,
-            "amount": int(payout.amount)
-        }
-        
-        logger.info(f"Initiating OTPay payout: {payload}")
-        
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{OTPAY_BASE_URL}/payout",
-                headers=get_otpay_headers(),
-                json=payload
-            )
-            
-            logger.info(f"OTPay payout response: {response.status_code}")
-            logger.info(f"OTPay payout: {response.text}")
-            
-            if response.status_code == 200:
-                # Handle OTPay response with potential prefix
-                response_text = response.text
-                json_start = response_text.find('{')
-                if json_start > 0:
-                    response_text = response_text[json_start:]
-                
-                result = json.loads(response_text)
-                
-                # Store payout record
-                payout_record = {
-                    "reference": payout_reference,
-                    "otpay_reference": result.get("reference", ""),
-                    "bank_code": payout.bank_code,
-                    "account_number": payout.account_number,
-                    "account_name": payout.account_name,
-                    "amount": payout.amount,
-                    "fee": result.get("fee", 0),
-                    "narration": payout.narration,
-                    "status": "completed" if result.get("status") else "failed",
-                    "response": result,
-                    "wallet_balance": result.get("wallet_balance"),
-                    "created_at": datetime.now(timezone.utc)
-                }
-                
-                await db.payouts.insert_one(payout_record)
-                
-                if result.get("status"):
-                    return {
-                        "status": True,
-                        "message": result.get("desc", "Payout successful"),
-                        "reference": payout_reference,
-                        "otpay_reference": result.get("reference"),
-                        "amount": payout.amount,
-                        "fee": result.get("fee", 0),
-                        "wallet_balance": result.get("wallet_balance")
-                    }
-                else:
-                    return {
-                        "status": False,
-                        "message": result.get("desc", "Payout failed"),
-                        "reference": payout_reference
-                    }
-            else:
-                logger.error(f"OTPay payout error: {response.status_code} - {response.text}")
-                
-                # Store failed payout
-                payout_record = {
-                    "reference": payout_reference,
-                    "bank_code": payout.bank_code,
-                    "account_number": payout.account_number,
-                    "account_name": payout.account_name,
-                    "amount": payout.amount,
-                    "narration": payout.narration,
-                    "status": "failed",
-                    "error": response.text,
-                    "created_at": datetime.now(timezone.utc)
-                }
-                await db.payouts.insert_one(payout_record)
-                
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Payout request failed"
-                )
-                
-    except httpx.TimeoutException:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Payout request timed out"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Payout error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Payout failed: {str(e)}"
-        )
-
-
-@router.get("/payouts")
-async def get_payouts(db=Depends(get_db)):
-    """Get payout history (Admin only)"""
-    try:
-        payouts = await db.payouts.find(
-            {},
-            {"_id": 0}
-        ).sort("created_at", -1).limit(50).to_list(length=50)
-        
-        # Convert datetime objects
-        for payout in payouts:
-            if payout.get("created_at"):
-                payout["created_at"] = payout["created_at"].isoformat()
-        
-        return {"payouts": payouts}
-        
-    except Exception as e:
-        logger.error(f"Get payouts error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch payouts"
-        )
-
