@@ -408,6 +408,50 @@ const AdminDashboard = () => {
     setUserDetails(null);
   };
 
+  // Pending Payments Functions
+  const fetchPendingPayments = async () => {
+    setLoadingPendingPayments(true);
+    try {
+      const response = await axios.get(`${API}/payments/pending-payments`);
+      setPendingPayments(response.data.transactions || []);
+    } catch (error) {
+      console.error('Failed to fetch pending payments:', error);
+      toast.error('Failed to load pending payments');
+    } finally {
+      setLoadingPendingPayments(false);
+    }
+  };
+
+  const handleConfirmPayment = async (orderReference) => {
+    if (!window.confirm('Are you sure you want to manually confirm this payment? This should only be done after verifying the transfer was received.')) {
+      return;
+    }
+    
+    setConfirmingPayment(orderReference);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/payments/admin/confirm-payment`, {
+        order_reference: orderReference,
+        admin_note: 'Manual confirmation by admin'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        toast.success(`Payment confirmed! Application ${response.data.application_id} updated.`);
+        fetchPendingPayments();
+        fetchData(); // Refresh all data
+      } else {
+        toast.error('Failed to confirm payment');
+      }
+    } catch (error) {
+      console.error('Failed to confirm payment:', error);
+      toast.error(error.response?.data?.detail || 'Failed to confirm payment');
+    } finally {
+      setConfirmingPayment(null);
+    }
+  };
+
   // Withdrawal Functions
   const fetchBanks = async () => {
     if (banks.length > 0) return; // Already fetched
