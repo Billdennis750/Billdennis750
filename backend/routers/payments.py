@@ -82,16 +82,89 @@ async def create_budpay_customer(email: str, first_name: str, last_name: str, ph
                     return data.get("data", {}).get("customer_code")
                 # Customer might already exist
                 elif "already exist" in data.get("message", "").lower():
-                    # Try to update and fetch existing customer
-                    return await get_and_update_existing_customer(email, first_name, last_name, phone)
+                    # Check if existing customer has complete details
+                    existing_code, has_complete_details = await get_existing_customer_with_details(email)
+                    if existing_code and has_complete_details:
+                        return existing_code
+                    else:
+                        # Create new customer with modified email (adding timestamp suffix)
+                        return await create_new_budpay_customer_variant(email, first_name, last_name, phone)
             elif response.status_code == 401:
                 # 401 might indicate customer exists
                 response_data = response.json()
                 if "already exist" in response_data.get("message", "").lower():
-                    return await get_and_update_existing_customer(email, first_name, last_name, phone)
+                    existing_code, has_complete_details = await get_existing_customer_with_details(email)
+                    if existing_code and has_complete_details:
+                        return existing_code
+                    else:
+                        return await create_new_budpay_customer_variant(email, first_name, last_name, phone)
             return None
     except Exception as e:
         logger.error(f"Failed to create BudPay customer: {e}")
+        return None
+
+
+async def get_existing_customer_with_details(email: str):
+    """Fetch existing customer and check if they have complete name details"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{BUDPAY_BASE_URL}/customer",
+                headers=get_budpay_headers()
+            )
+            
+            logger.info(f"BudPay fetch customers response: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status"):
+                    customers = data.get("data", [])
+                    for customer in customers:
+                        if customer.get("email", "").lower() == email.lower():
+                            customer_code = customer.get("customer_code")
+                            has_details = bool(customer.get("first_name") and customer.get("last_name"))
+                            logger.info(f"Found existing customer {customer_code}, has_details: {has_details}")
+                            return customer_code, has_details
+            return None, False
+    except Exception as e:
+        logger.error(f"Failed to fetch BudPay customer: {e}")
+        return None, False
+
+
+async def create_new_budpay_customer_variant(email: str, first_name: str, last_name: str, phone: str):
+    """Create a new customer with a variant email when original exists without complete details"""
+    import time
+    # Create a unique email variant by adding timestamp
+    email_parts = email.split("@")
+    if len(email_parts) == 2:
+        variant_email = f"{email_parts[0]}+{int(time.time())}@{email_parts[1]}"
+    else:
+        variant_email = f"{email}_{int(time.time())}"
+    
+    logger.info(f"Creating BudPay customer variant with email: {variant_email}")
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{BUDPAY_BASE_URL}/customer",
+                headers=get_budpay_headers(),
+                json={
+                    "email": variant_email,
+                    "first_name": first_name,
+                    "last_name": last_name or "Customer",
+                    "phone": phone
+                }
+            )
+            
+            logger.info(f"BudPay create variant customer response: {response.status_code} - {response.text}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status"):
+                    return data.get("data", {}).get("customer_code")
+            return None
+    except Exception as e:
+        logger.error(f"Failed to create BudPay variant customer: {e}")
         return None
 
 
