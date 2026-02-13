@@ -271,6 +271,80 @@ const UserDashboard = () => {
               </CardContent>
             </Card>
 
+            {/* Prominent Payment Card - Shows when payment is needed */}
+            {(recentApp.status === 'pending_payment' || recentApp.status === 'approved') && (
+              <Card className={`mb-6 overflow-hidden ${isDarkMode ? 'bg-gradient-to-r from-slate-800 to-slate-700' : 'bg-gradient-to-r from-green-50 to-emerald-50'} border-2 ${isDarkMode ? 'border-green-800' : 'border-green-200'}`}>
+                <CardContent className="py-6">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-green-900/50' : 'bg-green-100'}`}>
+                        {recentApp.status === 'pending_payment' ? (
+                          <CreditCard className="w-8 h-8 text-green-600" />
+                        ) : (
+                          <Wallet className="w-8 h-8 text-green-600" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className={`text-lg font-bold ${textPrimary}`}>
+                          {recentApp.status === 'pending_payment' ? 'Pay Processing Fee' : '🎉 Congratulations! Pay Deposit'}
+                        </h3>
+                        <p className={`text-sm ${textSecondary}`}>
+                          {recentApp.status === 'pending_payment' 
+                            ? 'Complete your payment to start the review process'
+                            : 'Your loan is approved! Pay deposit to receive funds'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-center md:items-end gap-2">
+                      <div className="flex items-baseline gap-1">
+                        <span className={`text-sm ${textMuted}`}>Amount:</span>
+                        <span className="text-3xl font-bold text-green-600">
+                          ₦{recentApp.status === 'pending_payment' ? '2,500' : '3,000'}
+                        </span>
+                      </div>
+                      <Button 
+                        onClick={() => handlePayment(recentApp, recentApp.status === 'pending_payment' ? 'processing_fee' : 'deposit')} 
+                        className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg shadow-green-600/30 px-8 py-3 text-base font-semibold rounded-xl transition-all hover:scale-105"
+                        disabled={paymentLoading}
+                      >
+                        {paymentLoading ? (
+                          <>
+                            <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Pay Now
+                            <ArrowRight className="w-5 h-5 ml-2" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Payment methods info */}
+                  <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-slate-600' : 'border-green-200'} flex items-center justify-center gap-6 flex-wrap`}>
+                    <span className={`text-xs ${textMuted} flex items-center gap-1`}>
+                      <CheckCircle className="w-3 h-3 text-green-500" /> Card Payment
+                    </span>
+                    <span className={`text-xs ${textMuted} flex items-center gap-1`}>
+                      <CheckCircle className="w-3 h-3 text-green-500" /> Bank Transfer
+                    </span>
+                    <span className={`text-xs ${textMuted} flex items-center gap-1`}>
+                      <CheckCircle className="w-3 h-3 text-green-500" /> USSD
+                    </span>
+                    <span className={`text-xs ${textMuted} flex items-center gap-1`}>
+                      <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                      </svg>
+                      Secured by BudPay
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Application Details */}
