@@ -661,3 +661,102 @@ async def get_transaction(order_ref: str, db=Depends(get_db)):
         transaction["updated_at"] = transaction["updated_at"].isoformat()
     
     return transaction
+
+
+
+class ManualConfirmPayment(BaseModel):
+    order_reference: str
+    transaction_reference: str = ""
+    admin_note: str = ""
+
+
+@router.post("/admin/confirm-payment")
+async def admin_confirm_payment(confirm: ManualConfirmPayment, db=Depends(get_db)):
+    """
+    Admin endpoint to manually confirm a payment.
+    Use when BudPay webhook doesn't arrive or for testing purposes.
+    """
+    try:
+        # Find the transaction
+        transaction = await db.transactions.find_one({"order_reference": confirm.order_reference})
+        
+        if not transaction:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transaction not found"
+            )
+        
+        if transaction.get("status") == "completed":
+            return {
+                "success": True,
+                "message": "Payment was already confirmed",
+                "application_id": transaction.get("application_id")
+            }
+        
+        # Update transaction to completed
+        update_data = {
+            "status": "completed",
+            "manual_confirmation": True,
+            "admin_confirmed_at": datetime.now(timezone.utc),
+            "admin_note": confirm.admin_note or "Manual confirmation by admin",
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        if confirm.transaction_reference:
+            update_data["transaction_reference"] = confirm.transaction_reference
+        
+        await db.transactions.update_one(
+            {"order_reference": confirm.order_reference},
+            {"$set": update_data}
+        )
+        
+        # Process the successful payment (update application status)
+        await process_successful_payment(transaction, db)
+        
+        logger.info(f"Admin manually confirmed payment: {confirm.order_reference}")
+        
+        return {
+            "success": True,
+            "message": "Payment confirmed successfully",
+            "application_id": transaction.get("application_id"),
+            "amount": transaction.get("amount"),
+            "payment_type": transaction.get("payment_type")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Admin confirm payment error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to confirm payment"
+        )
+
+
+@router.get("/pending-payments")
+async def get_pending_payments(db=Depends(get_db)):
+    """Get all pending payment transactions for admin review"""
+    try:
+        pending = await db.transactions.find(
+            {"status": "pending"},
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(100)
+        
+        # Convert datetime objects to ISO strings
+        for txn in pending:
+            if txn.get("created_at"):
+                txn["created_at"] = txn["created_at"].isoformat()
+            if txn.get("updated_at"):
+                txn["updated_at"] = txn["updated_at"].isoformat()
+        
+        return {
+            "success": True,
+            "count": len(pending),
+            "transactions": pending
+        }
+    except Exception as e:
+        logger.error(f"Error fetching pending payments: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch pending payments"
+        )
