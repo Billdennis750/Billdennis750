@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="19" time="72.873" timestamp="2026-02-13T11:13:56.862112+00:00" hostname="agent-env-1f0f0ca0-88aa-4791-8328-716683205635"><testcase classname="backend.tests.test_api.TestHealthAndBasicAPI" name="test_health_check" time="10.130"><failure message="requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=10)">/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1395: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:325: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:286: in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/socket.py:718: in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1314: in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1166: in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:644: in send
+    resp = conn.urlopen(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:841: in urlopen
+    retries = retries.increment(
+/root/.venv/lib/python3.11/site-packages/urllib3/util/retry.py:474: in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/util/util.py:39: in reraise
+    raise value
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:787: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:536: in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:367: in _raise_timeout
+    raise ReadTimeoutError(
+E   urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=10)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_api.py:30: in test_health_check
+    response = requests.get(f"{BASE_URL}/api/health", timeout=10)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:73: in get
+    return request("get", url, params=params, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:59: in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:589: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:703: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:690: in send
+    raise ReadTimeout(e, request=request)
+E   requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=10)</failure></testcase><testcase classname="backend.tests.test_api.TestHealthAndBasicAPI" name="test_api_base_responds" time="0.150" /><testcase classname="backend.tests.test_api.TestUserRegistration" name="test_register_new_user_success" time="15.058"><failure message="requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)">/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1395: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:325: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:286: in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/socket.py:718: in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1314: in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1166: in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:644: in send
+    resp = conn.urlopen(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:841: in urlopen
+    retries = retries.increment(
+/root/.venv/lib/python3.11/site-packages/urllib3/util/retry.py:474: in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/util/util.py:39: in reraise
+    raise value
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:787: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:536: in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:367: in _raise_timeout
+    raise ReadTimeoutError(
+E   urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_api.py:55: in test_register_new_user_success
+    response = requests.post(f"{BASE_URL}/api/auth/register", json=payload, timeout=15)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:115: in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:59: in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:589: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:703: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:690: in send
+    raise ReadTimeout(e, request=request)
+E   requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)</failure></testcase><testcase classname="backend.tests.test_api.TestUserRegistration" name="test_register_duplicate_email_fails" time="15.082"><failure message="requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)">/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1395: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:325: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:286: in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/socket.py:718: in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1314: in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1166: in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:644: in send
+    resp = conn.urlopen(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:841: in urlopen
+    retries = retries.increment(
+/root/.venv/lib/python3.11/site-packages/urllib3/util/retry.py:474: in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/util/util.py:39: in reraise
+    raise value
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:787: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:536: in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:367: in _raise_timeout
+    raise ReadTimeoutError(
+E   urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_api.py:71: in test_register_duplicate_email_fails
+    response = requests.post(f"{BASE_URL}/api/auth/register", json=payload, timeout=15)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:115: in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:59: in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:589: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:703: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:690: in send
+    raise ReadTimeout(e, request=request)
+E   requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)</failure></testcase><testcase classname="backend.tests.test_api.TestUserRegistration" name="test_register_invalid_email_fails" time="15.116"><failure message="requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)">/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1395: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:325: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:286: in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/socket.py:718: in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1314: in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/ssl.py:1166: in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:644: in send
+    resp = conn.urlopen(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:841: in urlopen
+    retries = retries.increment(
+/root/.venv/lib/python3.11/site-packages/urllib3/util/retry.py:474: in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/util/util.py:39: in reraise
+    raise value
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:787: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:536: in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:367: in _raise_timeout
+    raise ReadTimeoutError(
+E   urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_api.py:85: in test_register_invalid_email_fails
+    response = requests.post(f"{BASE_URL}/api/auth/register", json=payload, timeout=15)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:115: in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/api.py:59: in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:589: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:703: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:690: in send
+    raise ReadTimeout(e, request=request)
+E   requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='budpay-mfb.preview.emergentagent.com', port=443): Read timed out. (read timeout=15)</failure></testcase><testcase classname="backend.tests.test_api.TestUserLogin" name="test_login_success" time="10.966"><failure message="AssertionError: Login failed: 401 - {&quot;detail&quot;:&quot;Incorrect email or password&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_api.py:103: in test_login_success
+    assert response.status_code == 200, f"Login failed: {response.status_code} - {response.text}"
+E   AssertionError: Login failed: 401 - {"detail":"Incorrect email or password"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_api.TestUserLogin" name="test_login_wrong_password_fails" time="0.441" /><testcase classname="backend.tests.test_api.TestUserLogin" name="test_login_nonexistent_user_fails" time="0.120" /><testcase classname="backend.tests.test_api.TestAdminLogin" name="test_admin_login_success" time="0.443" /><testcase classname="backend.tests.test_api.TestApplicationsEndpoint" name="test_get_all_applications" time="0.630" /><testcase classname="backend.tests.test_api.TestApplicationsEndpoint" name="test_get_single_application" time="0.734" /><testcase classname="backend.tests.test_api.TestApplicationsEndpoint" name="test_get_nonexistent_application" time="0.752" /><testcase classname="backend.tests.test_api.TestAdminEndpoints" name="test_get_admin_users" time="0.426" /><testcase classname="backend.tests.test_api.TestAdminEndpoints" name="test_get_admin_transactions" time="0.560" /><testcase classname="backend.tests.test_api.TestPaymentEndpoints" name="test_payment_verify_invalid_reference" time="0.156" /><testcase classname="backend.tests.test_api.TestPaymentEndpoints" name="test_payment_initiate_requires_application" time="0.158" /><testcase classname="backend.tests.test_api.TestForgotPassword" name="test_forgot_password_endpoint" time="0.095" /><testcase classname="backend.tests.test_api.TestUserDashboard" name="test_get_user_info" time="0.755" /><testcase classname="backend.tests.test_api.TestUserDashboard" name="test_get_user_applications" time="0.591" /></testsuite></testsuites>
