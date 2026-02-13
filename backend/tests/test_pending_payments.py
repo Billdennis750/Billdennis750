@@ -26,7 +26,7 @@ class TestAdminLogin:
         
         assert response.status_code == 200, f"Login failed: {response.text}"
         data = response.json()
-        assert "token" in data, "No token in response"
+        assert "access_token" in data, "No access_token in response"
         assert "user" in data, "No user data in response"
         assert data["user"]["role"] == "admin", "User is not admin"
         print(f"SUCCESS: Admin login - user role: {data['user']['role']}")
@@ -207,7 +207,7 @@ class TestDashboardIntegration:
         if response.status_code != 200:
             pytest.skip("Could not login as admin")
         
-        return response.json()["token"]
+        return response.json()["access_token"]
     
     def test_admin_can_view_applications(self, auth_token):
         """Test admin can view all applications"""
