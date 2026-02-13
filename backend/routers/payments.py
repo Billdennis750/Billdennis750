@@ -82,17 +82,68 @@ async def create_budpay_customer(email: str, first_name: str, last_name: str, ph
                     return data.get("data", {}).get("customer_code")
                 # Customer might already exist
                 elif "already exist" in data.get("message", "").lower():
-                    # Try to fetch existing customer
-                    return await get_existing_customer_code(email)
+                    # Try to update and fetch existing customer
+                    return await get_and_update_existing_customer(email, first_name, last_name, phone)
             elif response.status_code == 401:
                 # 401 might indicate customer exists
                 response_data = response.json()
                 if "already exist" in response_data.get("message", "").lower():
-                    return await get_existing_customer_code(email)
+                    return await get_and_update_existing_customer(email, first_name, last_name, phone)
             return None
     except Exception as e:
         logger.error(f"Failed to create BudPay customer: {e}")
         return None
+
+
+async def get_and_update_existing_customer(email: str, first_name: str, last_name: str, phone: str):
+    """Fetch existing customer code and update their details if needed"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Try to fetch customer list and find by email
+            response = await client.get(
+                f"{BUDPAY_BASE_URL}/customer",
+                headers=get_budpay_headers()
+            )
+            
+            logger.info(f"BudPay fetch customers response: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status"):
+                    customers = data.get("data", [])
+                    for customer in customers:
+                        if customer.get("email", "").lower() == email.lower():
+                            customer_code = customer.get("customer_code")
+                            
+                            # Update customer with name if missing
+                            if not customer.get("first_name") or not customer.get("last_name"):
+                                await update_budpay_customer(customer_code, first_name, last_name, phone)
+                            
+                            return customer_code
+            return None
+    except Exception as e:
+        logger.error(f"Failed to fetch BudPay customer: {e}")
+        return None
+
+
+async def update_budpay_customer(customer_code: str, first_name: str, last_name: str, phone: str):
+    """Update customer details in BudPay"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.put(
+                f"{BUDPAY_BASE_URL}/customer/{customer_code}",
+                headers=get_budpay_headers(),
+                json={
+                    "first_name": first_name,
+                    "last_name": last_name or "Customer",
+                    "phone": phone
+                }
+            )
+            logger.info(f"BudPay update customer response: {response.status_code} - {response.text}")
+            return response.status_code == 200
+    except Exception as e:
+        logger.error(f"Failed to update BudPay customer: {e}")
+        return False
 
 
 async def get_existing_customer_code(email: str):
@@ -117,6 +168,32 @@ async def get_existing_customer_code(email: str):
             return None
     except Exception as e:
         logger.error(f"Failed to fetch BudPay customer: {e}")
+        return None
+
+
+async def get_existing_dva_for_customer(customer_code: str):
+    """Check if customer already has a DVA assigned"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{BUDPAY_BASE_URL}/dedicated_virtual_account",
+                headers=get_budpay_headers()
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status"):
+                    accounts = data.get("data", [])
+                    for account in accounts:
+                        if account.get("customer", {}).get("customer_code") == customer_code:
+                            return {
+                                "bank": account.get("bank", {}),
+                                "account_number": account.get("account_number"),
+                                "account_name": account.get("account_name")
+                            }
+            return None
+    except Exception as e:
+        logger.error(f"Failed to fetch existing DVA: {e}")
         return None
 
 
