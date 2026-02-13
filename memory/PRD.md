@@ -44,6 +44,13 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 8. Admin approves disbursement → Status: `disbursed`
 
 ## Recent Changes (Feb 13, 2026)
+- **BudPay DVA Fix for Legacy Customers**: Fixed critical issue where existing BudPay customers with inaccessible DVAs were shown incorrect static bank details. The system now:
+  - Detects when a DVA exists but can't be retrieved (409 Conflict from BudPay API)
+  - Automatically creates a variant customer with `+timestamp` email suffix
+  - Generates a fresh, valid DVA for the variant customer
+  - Cleans the account name (removes "BLM DATA SOLUTIONS LTD /" prefix)
+  - Example: `billdennis7500@gmail.com` now gets a real DVA (Globus Bank, 9204151622, "Kingsley Dennis")
+- **Admin Dashboard Pagination**: Changed from 50 to 20 items per page
 - **Enhanced BudPay DVA Webhook**: Updated webhook handler to support DVA-specific events (`eventType: "transaction"`)
 - **Admin Manual Payment Confirmation**: Added Payments tab with "Pending Bank Transfers" section
   - Shows all pending transactions with Customer, Application ID, Amount, Type, Bank Details, Date
