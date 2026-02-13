@@ -376,7 +376,23 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                 # Create dedicated virtual account
                 dva_data = await create_dedicated_virtual_account(customer_code)
                 
-                if dva_data:
+                # Check if DVA already exists but can't be retrieved (needs variant customer)
+                if dva_data and dva_data.get("needs_variant"):
+                    logger.info(f"Creating variant customer for {payment.customer_email} due to existing unretrievable DVA")
+                    # Create a variant customer with timestamp suffix
+                    variant_customer_code = await create_new_budpay_customer_variant(
+                        email=payment.customer_email,
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone=payment.customer_phone or "08000000000"
+                    )
+                    if variant_customer_code:
+                        customer_code = variant_customer_code
+                        dva_data = await create_dedicated_virtual_account(variant_customer_code)
+                    else:
+                        dva_data = None
+                
+                if dva_data and not dva_data.get("needs_variant"):
                     # Clean up account name - remove merchant prefix like "BLM DATA SOLUTIONS LTD / "
                     raw_account_name = dva_data.get("account_name") or f"Cashflow MFB - {payment.customer_name}"
                     # Remove common merchant prefixes
