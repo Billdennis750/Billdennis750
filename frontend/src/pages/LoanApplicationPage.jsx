@@ -168,54 +168,29 @@ const LoanApplicationPage = () => {
       // Store application info
       localStorage.setItem('application_id', application_id);
       
-      // Try to initiate payment
+      // Auto-login the user first
       try {
-        const paymentResponse = await axios.post(`${API}/payments/initiate`, {
-          application_id: application_id,
-          customer_email: finalData.email,
-          customer_name: finalData.fullName,
-          customer_phone: finalData.phone,
-          amount: 2500,
-          redirect_url: `${window.location.origin}/payment-callback`
-        }, {
-          timeout: 30000 // 30 second timeout for payment
+        const loginResponse = await axios.post(`${API}/auth/login`, {
+          email: finalData.email,
+          password: finalData.password
         });
         
-        const { checkout_link, order_reference } = paymentResponse.data;
+        localStorage.setItem('token', loginResponse.data.access_token);
+        localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
         
-        // Store references for verification
-        localStorage.setItem('order_reference', order_reference);
+        // Redirect to dashboard where they can see bank transfer details and pay
+        toast.success('Application submitted! Redirecting to dashboard to complete payment...');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
         
-        // Redirect to payment page
-        window.location.href = checkout_link;
-        
-      } catch (paymentError) {
-        console.error('Payment initiation error:', paymentError);
-        
-        // Application was submitted successfully, but payment failed
-        // Redirect to dashboard where they can pay later
-        toast.info('Application submitted! Redirecting to dashboard to complete payment...');
-        
-        // Auto-login the user and redirect to dashboard
-        try {
-          const loginResponse = await axios.post(`${API}/auth/login`, {
-            email: finalData.email,
-            password: finalData.password
-          });
-          
-          localStorage.setItem('token', loginResponse.data.access_token);
-          localStorage.setItem('user', JSON.stringify(loginResponse.data.user));
-          
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 1500);
-        } catch (loginError) {
-          // If auto-login fails, redirect to login page
-          toast.info('Please login with your email and password to complete payment.');
-          setTimeout(() => {
-            navigate('/login');
-          }, 2000);
-        }
+      } catch (loginError) {
+        console.error('Auto-login error:', loginError);
+        // If auto-login fails, redirect to login page
+        toast.info('Application submitted! Please login to complete payment.');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       }
       
     } catch (error) {
