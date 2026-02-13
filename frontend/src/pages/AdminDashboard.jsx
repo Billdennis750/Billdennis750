@@ -791,6 +791,7 @@ const AdminDashboard = () => {
                     <p className="mt-2 text-gray-500">No applications found</p>
                   </div>
                 ) : (
+                  <>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -804,7 +805,7 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredApps.map((app) => (
+                        {paginatedApps.map((app) => (
                           <React.Fragment key={app.application_id}>
                             <tr className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => toggleRow(app.application_id)}>
                               <td className="p-3">
