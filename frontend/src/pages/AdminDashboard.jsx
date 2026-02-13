@@ -544,6 +544,78 @@ const AdminDashboard = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination calculations for Applications
+  const totalApplicationsPages = Math.ceil(filteredApps.length / ITEMS_PER_PAGE);
+  const paginatedApps = filteredApps.slice(
+    (applicationsPage - 1) * ITEMS_PER_PAGE,
+    applicationsPage * ITEMS_PER_PAGE
+  );
+  
+  // Pagination calculations for Users
+  const totalUsersPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  const paginatedUsers = users.slice(
+    (usersPage - 1) * ITEMS_PER_PAGE,
+    usersPage * ITEMS_PER_PAGE
+  );
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setApplicationsPage(1);
+  }, [searchTerm, statusFilter]);
+
+  // Pagination component
+  const PaginationControls = ({ currentPage, totalPages, totalItems, onPageChange, itemName }) => {
+    if (totalPages <= 1) return null;
+    
+    const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+    const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+    
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
+        <p className="text-sm text-gray-500">
+          Showing <span className="font-semibold">{startItem}</span> to <span className="font-semibold">{endItem}</span> of <span className="font-semibold">{totalItems}</span> {itemName}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(1)}
+            disabled={currentPage === 1}
+          >
+            First
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <span className="px-3 py-1 text-sm font-medium bg-green-100 text-green-700 rounded">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            Last
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   const getStatusBadge = (status) => {
     const config = statusColors[status] || statusColors.pending_payment;
     return (
