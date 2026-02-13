@@ -86,7 +86,7 @@ const AdminDashboard = () => {
   // Pagination State
   const [applicationsPage, setApplicationsPage] = useState(1);
   const [usersPage, setUsersPage] = useState(1);
-  const ITEMS_PER_PAGE = 50;
+  const ITEMS_PER_PAGE = 20;
   
   // Withdrawal State
   const [banks, setBanks] = useState([]);
