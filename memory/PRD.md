@@ -25,7 +25,7 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 - Password reset functionality
 
 ### Admin Features
-- View all applications with filtering and **pagination (50 per page)**
+- View all applications with filtering and **pagination (20 per page)**
 - Approve/reject loan applications
 - Approve/decline loan disbursements
 - View uploaded documents
@@ -55,7 +55,7 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 ## Recent Changes (Feb 12, 2026)
 - **Payment Flow Changed**: Removed BudPay checkout redirect, now uses **direct bank transfer** with in-app modal
 - **Virtual Account**: Payment details shown directly in the app (Bank, Account Name, Account Number)
-- **Admin Dashboard Pagination**: Added pagination to Applications and Users tabs (50 items per page)
+- **Admin Dashboard Pagination**: Added pagination to Applications and Users tabs (20 items per page)
 - **Payment UI Redesign**: New prominent payment card with gradient styling, modern modal
 
 ## API Endpoints
