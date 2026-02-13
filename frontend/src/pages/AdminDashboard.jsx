@@ -926,6 +926,14 @@ const AdminDashboard = () => {
                       </tbody>
                     </table>
                   </div>
+                  <PaginationControls
+                    currentPage={applicationsPage}
+                    totalPages={totalApplicationsPages}
+                    totalItems={filteredApps.length}
+                    onPageChange={setApplicationsPage}
+                    itemName="applications"
+                  />
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -935,7 +943,13 @@ const AdminDashboard = () => {
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle>Registered Users</CardTitle>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <CardTitle>Registered Users</CardTitle>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Users className="w-4 h-4" />
+                    <span>Total: <span className="font-semibold text-gray-700">{users.length}</span> users</span>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {users.length === 0 ? (
@@ -944,6 +958,7 @@ const AdminDashboard = () => {
                     <p className="mt-2 text-gray-500">No registered users yet</p>
                   </div>
                 ) : (
+                  <>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -957,7 +972,7 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {users.map((user, index) => (
+                        {paginatedUsers.map((user, index) => (
                           <tr key={index} className="border-b hover:bg-gray-50">
                             <td className="p-3 font-medium">{user.full_name}</td>
                             <td className="p-3 text-gray-600">{user.email}</td>
