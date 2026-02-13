@@ -95,8 +95,8 @@ const UserDashboard = () => {
         setShowPaymentModal(true);
         setPaymentLoading(false);
       } else if (response.data.checkout_link) {
-        // Legacy checkout flow (BudPay, etc.)
-        window.location.href = response.data.checkout_link;
+        // BudPay checkout - redirect in same window
+        window.location.assign(response.data.checkout_link);
       } else {
         toast.error('Payment method not available');
         setPaymentLoading(false);
