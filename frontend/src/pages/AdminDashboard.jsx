@@ -102,6 +102,11 @@ const AdminDashboard = () => {
   const [processingWithdrawal, setProcessingWithdrawal] = useState(false);
   const [payoutHistory, setPayoutHistory] = useState([]);
   const [loadingPayouts, setLoadingPayouts] = useState(false);
+  
+  // Pending Payments State
+  const [pendingPayments, setPendingPayments] = useState([]);
+  const [loadingPendingPayments, setLoadingPendingPayments] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(null);
 
   useEffect(() => {
     fetchData();
