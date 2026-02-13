@@ -1010,6 +1010,14 @@ const AdminDashboard = () => {
                       </tbody>
                     </table>
                   </div>
+                  <PaginationControls
+                    currentPage={usersPage}
+                    totalPages={totalUsersPages}
+                    totalItems={users.length}
+                    onPageChange={setUsersPage}
+                    itemName="users"
+                  />
+                  </>
                 )}
               </CardContent>
             </Card>
