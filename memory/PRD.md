@@ -39,6 +39,11 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 4. User pays ₦3,000 fixed deposit → Status: `deposit_paid`, Disbursement: `pending`
 5. Admin approves disbursement → Status: `disbursed`
 
+## Recent Changes (Feb 13, 2026)
+- **Payment Flow Changed**: Removed BudPay checkout redirect, now uses **direct bank transfer** with in-app modal
+- **Virtual Account**: Payment details shown directly in the app (Bank, Account Name, Account Number)
+- **No External Redirect**: User stays in the app, copies account details, and transfers via their bank app
+
 ## Recent Changes (Feb 12, 2026)
 - **Admin Dashboard Pagination**: Added pagination to Applications and Users tabs (50 items per page)
 - **User Count Display**: Added total users count in the Users tab header
@@ -47,8 +52,6 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
   - Redesigned payment modal with modern look
   - Added payment methods info (Card, Bank Transfer, USSD)
   - Security badge showing "Secured by BudPay"
-- **BudPay Opens in Same Window**: Payment checkout now opens in the same tab (not new tab)
-- **Email Links Fixed**: Password reset emails now point to preview URL
 
 ## API Endpoints
 
