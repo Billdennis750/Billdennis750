@@ -12,7 +12,7 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 - **Frontend**: React, TailwindCSS, Shadcn/UI
 - **Backend**: FastAPI (Python), Motor (async MongoDB)
 - **Database**: MongoDB
-- **Email**: Resend (primary), SendGrid (fallback)
+- **Email**: SendGrid (primary), Resend (in progress)
 - **Payments**: BudPay (checkout flow)
 
 ## Core Features
@@ -25,18 +25,30 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 - Password reset functionality
 
 ### Admin Features
-- View all applications with filtering
+- View all applications with filtering and **pagination (50 per page)**
 - Approve/reject loan applications
 - Approve/decline loan disbursements
 - View uploaded documents
 - Email notifications to users
+- **Total users count display**
 
 ## Payment Flow
 1. User submits loan application → Status: `pending_payment`
-2. User pays ₦2,500 processing fee via OTPay bank transfer → Status: `under_review`
+2. User pays ₦2,500 processing fee via BudPay checkout → Status: `under_review`
 3. Admin reviews and approves → Status: `approved`
 4. User pays ₦3,000 fixed deposit → Status: `deposit_paid`, Disbursement: `pending`
 5. Admin approves disbursement → Status: `disbursed`
+
+## Recent Changes (Feb 12, 2026)
+- **Admin Dashboard Pagination**: Added pagination to Applications and Users tabs (50 items per page)
+- **User Count Display**: Added total users count in the Users tab header
+- **Payment UI Redesign**: 
+  - New prominent payment card with gradient styling
+  - Redesigned payment modal with modern look
+  - Added payment methods info (Card, Bank Transfer, USSD)
+  - Security badge showing "Secured by BudPay"
+- **BudPay Opens in Same Window**: Payment checkout now opens in the same tab (not new tab)
+- **Email Links Fixed**: Password reset emails now point to preview URL
 
 ## API Endpoints
 
