@@ -198,8 +198,14 @@ async def get_existing_dva_for_customer(customer_code: str):
 
 
 async def create_dedicated_virtual_account(customer_code: str):
-    """Create a dedicated virtual account for bank transfers"""
+    """Create a dedicated virtual account for bank transfers, or return existing one"""
     try:
+        # First check if customer already has a DVA
+        existing_dva = await get_existing_dva_for_customer(customer_code)
+        if existing_dva:
+            logger.info(f"Found existing DVA for customer {customer_code}")
+            return existing_dva
+        
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 f"{BUDPAY_BASE_URL}/dedicated_virtual_account",
