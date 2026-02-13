@@ -84,9 +84,8 @@ const UserDashboard = () => {
       localStorage.setItem('application_id', app.application_id);
       localStorage.setItem('payment_type', paymentType);
       
-      // Check if it's a virtual account (bank transfer) or checkout link
+      // Bank transfer flow - show account details in modal
       if (response.data.virtual_account) {
-        // OTPay - Show bank transfer details
         setPaymentDetails({
           ...response.data,
           paymentType,
@@ -94,15 +93,13 @@ const UserDashboard = () => {
         });
         setShowPaymentModal(true);
         setPaymentLoading(false);
-      } else if (response.data.checkout_link) {
-        // BudPay checkout - redirect in same window
-        window.location.assign(response.data.checkout_link);
       } else {
-        toast.error('Payment method not available');
+        toast.error('Payment method not available. Please try again.');
         setPaymentLoading(false);
       }
     } catch (error) {
-      toast.error('Failed to initiate payment');
+      console.error('Payment error:', error);
+      toast.error('Failed to initiate payment. Please try again.');
       setPaymentLoading(false);
     }
   };
