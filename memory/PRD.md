@@ -95,7 +95,7 @@ Build a full-stack platform for Cashflow MFB, a microfinance bank, enabling:
 
 ### P1 - High Priority
 - **BudPay Webhook Configuration**: Need to configure webhook URL in BudPay dashboard
-  - Webhook URL: `https://mfb-staging.preview.emergentagent.com/api/payments/webhook`
+  - Webhook URL: `https://loan-app-staging.preview.emergentagent.com/api/payments/webhook`
 
 ### P2 - Medium Priority
 - **Email Service Migration**: SendGrid → Resend incomplete (both failing with 401)
@@ -112,12 +112,12 @@ BUDPAY_SECRET_KEY=sk_live_xxx
 BUDPAY_PUBLIC_KEY=pk_live_xxx
 RESEND_API_KEY=re_xxx
 EMAIL_PROVIDER=resend
-FRONTEND_URL=https://mfb-staging.preview.emergentagent.com
+FRONTEND_URL=https://loan-app-staging.preview.emergentagent.com
 ```
 
 ### Frontend (.env)
 ```
-REACT_APP_BACKEND_URL=https://mfb-staging.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://loan-app-staging.preview.emergentagent.com
 ```
 
 ## Test Credentials

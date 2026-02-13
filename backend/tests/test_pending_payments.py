@@ -7,7 +7,7 @@ import requests
 import os
 
 # Get base URL from environment
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://mfb-staging.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://loan-app-staging.preview.emergentagent.com').rstrip('/')
 
 # Admin credentials for testing
 ADMIN_EMAIL = "kdride6@gmail.com"

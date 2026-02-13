@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Test configuration
-BACKEND_URL = "https://mfb-staging.preview.emergentagent.com"
+BACKEND_URL = "https://loan-app-staging.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Admin credentials for testing
