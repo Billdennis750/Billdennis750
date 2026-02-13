@@ -21,7 +21,7 @@ settings = get_settings()
 router = APIRouter(prefix="/api/payments", tags=["payments"])
 
 # ============================================================================
-# BUDPAY CONFIGURATION
+# BUDPAY CONFIGURATION - DEDICATED VIRTUAL ACCOUNT (DVA)
 # ============================================================================
 BUDPAY_BASE_URL = "https://api.budpay.com/api/v2"
 
@@ -59,6 +59,57 @@ def get_budpay_headers():
     }
 
 
+async def create_budpay_customer(email: str, first_name: str, last_name: str, phone: str):
+    """Create a customer in BudPay to get customer_code for DVA"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{BUDPAY_BASE_URL}/customer",
+                headers=get_budpay_headers(),
+                json={
+                    "email": email,
+                    "first_name": first_name,
+                    "last_name": last_name or "Customer",
+                    "phone": phone
+                }
+            )
+            
+            logger.info(f"BudPay create customer response: {response.status_code} - {response.text}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status"):
+                    return data.get("data", {}).get("customer_code")
+            return None
+    except Exception as e:
+        logger.error(f"Failed to create BudPay customer: {e}")
+        return None
+
+
+async def create_dedicated_virtual_account(customer_code: str):
+    """Create a dedicated virtual account for bank transfers"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{BUDPAY_BASE_URL}/dedicated_virtual_account",
+                headers=get_budpay_headers(),
+                json={
+                    "customer": customer_code
+                }
+            )
+            
+            logger.info(f"BudPay DVA response: {response.status_code} - {response.text}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status"):
+                    return data.get("data", {})
+            return None
+    except Exception as e:
+        logger.error(f"Failed to create BudPay DVA: {e}")
+        return None
+
+
 # ============================================================================
 # PAYMENT ENDPOINTS
 # ============================================================================
@@ -66,14 +117,14 @@ def get_budpay_headers():
 @router.post("/initiate", response_model=dict)
 async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
     """
-    Initiate a payment transaction with BudPay Standard Checkout.
+    Initiate a payment transaction with BudPay Dedicated Virtual Account.
     
-    BudPay Flow:
-    1. Initialize transaction with amount and customer details
-    2. Return checkout URL for customer to complete payment
-    3. Customer pays via card, bank transfer, or USSD
-    4. BudPay redirects to callback URL with payment status
-    5. Webhook notification confirms payment
+    DVA Flow (Bank Transfer Only - No Checkout Redirect):
+    1. Create/get customer in BudPay
+    2. Create dedicated virtual account for the customer
+    3. Return bank account details for direct transfer
+    4. Customer transfers exact amount to the virtual account
+    5. BudPay webhook confirms payment automatically
     """
     try:
         # Verify application exists
@@ -90,66 +141,79 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         # Determine payment type
         is_processing_fee = payment.amount <= 2500
         
-        # Prepare BudPay Standard Checkout payload
-        budpay_payload = {
-            "email": payment.customer_email,
-            "amount": str(int(payment.amount)),
-            "currency": "NGN",
-            "reference": order_reference,
-            "callback": payment.redirect_url
-        }
+        # Parse customer name
+        name_parts = payment.customer_name.strip().split(" ", 1)
+        first_name = name_parts[0] if name_parts else "Customer"
+        last_name = name_parts[1] if len(name_parts) > 1 else "User"
         
-        logger.info(f"Creating BudPay checkout: {budpay_payload}")
+        # Check if customer already has a virtual account stored
+        existing_dva = await db.virtual_accounts.find_one({
+            "customer_email": payment.customer_email,
+            "is_active": True
+        })
         
-        checkout_link = None
-        budpay_reference = None
+        virtual_account = None
+        customer_code = None
         
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    f"{BUDPAY_BASE_URL}/transaction/initialize",
-                    headers=get_budpay_headers(),
-                    json=budpay_payload
-                )
+        if existing_dva:
+            # Use existing virtual account
+            virtual_account = {
+                "bank_name": existing_dva.get("bank_name"),
+                "account_number": existing_dva.get("account_number"),
+                "account_name": existing_dva.get("account_name")
+            }
+            customer_code = existing_dva.get("customer_code")
+            logger.info(f"Using existing DVA for {payment.customer_email}")
+        else:
+            # Create new customer and DVA
+            logger.info(f"Creating new BudPay customer for {payment.customer_email}")
+            
+            customer_code = await create_budpay_customer(
+                email=payment.customer_email,
+                first_name=first_name,
+                last_name=last_name,
+                phone=payment.customer_phone or "08000000000"
+            )
+            
+            if customer_code:
+                logger.info(f"Created BudPay customer: {customer_code}")
                 
-                logger.info(f"BudPay response status: {response.status_code}")
-                logger.info(f"BudPay response: {response.text}")
+                # Create dedicated virtual account
+                dva_data = await create_dedicated_virtual_account(customer_code)
                 
-                if response.status_code == 200:
-                    budpay_response = response.json()
+                if dva_data:
+                    virtual_account = {
+                        "bank_name": dva_data.get("bank", {}).get("name") or dva_data.get("bank_name") or "BudPay Bank",
+                        "account_number": dva_data.get("account_number") or dva_data.get("virtual_account_number"),
+                        "account_name": dva_data.get("account_name") or f"Cashflow MFB - {payment.customer_name}"
+                    }
                     
-                    if budpay_response.get("status"):
-                        data = budpay_response.get("data", {})
-                        checkout_link = data.get("authorization_url")
-                        budpay_reference = data.get("reference") or order_reference
-                        
-                        logger.info(f"BudPay checkout URL created: {checkout_link}")
-                    else:
-                        error_msg = budpay_response.get("message", "Unknown error")
-                        logger.error(f"BudPay API error: {error_msg}")
-                        raise Exception(f"BudPay error: {error_msg}")
-                else:
-                    logger.error(f"BudPay API error: {response.status_code} - {response.text}")
-                    raise Exception(f"BudPay API returned {response.status_code}")
-                    
-        except httpx.TimeoutException:
-            logger.error("BudPay API timeout")
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail="Payment gateway timeout. Please try again."
-            )
-        except Exception as budpay_error:
-            logger.error(f"BudPay payment initiation failed: {str(budpay_error)}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Payment gateway error: {str(budpay_error)}"
-            )
+                    # Store the virtual account for future use
+                    await db.virtual_accounts.update_one(
+                        {"customer_email": payment.customer_email},
+                        {"$set": {
+                            "customer_email": payment.customer_email,
+                            "customer_name": payment.customer_name,
+                            "customer_code": customer_code,
+                            "bank_name": virtual_account["bank_name"],
+                            "account_number": virtual_account["account_number"],
+                            "account_name": virtual_account["account_name"],
+                            "is_active": True,
+                            "created_at": datetime.now(timezone.utc),
+                            "updated_at": datetime.now(timezone.utc)
+                        }},
+                        upsert=True
+                    )
+                    logger.info(f"Created and stored DVA: {virtual_account}")
         
-        if not checkout_link:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Failed to create checkout link"
-            )
+        # If DVA creation failed, use fallback static account
+        if not virtual_account:
+            logger.warning("DVA creation failed, using fallback account")
+            virtual_account = {
+                "bank_name": "Wema Bank",
+                "account_number": "7366628986",
+                "account_name": "CASHFLOW MFB"
+            }
         
         # Store transaction record
         transaction_doc = {
@@ -157,13 +221,13 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
             "order_reference": order_reference,
             "customer_email": payment.customer_email,
             "customer_name": payment.customer_name,
+            "customer_code": customer_code,
             "amount": payment.amount,
             "currency": "NGN",
-            "budpay_reference": budpay_reference,
-            "checkout_link": checkout_link,
+            "virtual_account": virtual_account,
             "payment_type": "processing_fee" if is_processing_fee else "deposit",
-            "payment_method": "budpay",
-            "status": "initiated",
+            "payment_method": "bank_transfer",
+            "status": "pending",
             "transaction_reference": None,
             "webhook_received": False,
             "webhook_verified": False,
@@ -173,13 +237,15 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
         
         await db.transactions.insert_one(transaction_doc)
         
+        # Return virtual account details for bank transfer
         return {
-            "checkout_link": checkout_link,
+            "virtual_account": virtual_account,
             "order_reference": order_reference,
-            "status": "initiated",
-            "payment_type": "card",
+            "status": "pending",
+            "payment_type": "bank_transfer",
             "amount": int(payment.amount),
-            "currency": "NGN"
+            "currency": "NGN",
+            "message": f"Transfer exactly ₦{int(payment.amount):,} to the account above"
         }
         
     except HTTPException:
