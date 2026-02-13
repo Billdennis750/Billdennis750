@@ -83,6 +83,11 @@ const AdminDashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
   const [loadingUserDetails, setLoadingUserDetails] = useState(false);
   
+  // Pagination State
+  const [applicationsPage, setApplicationsPage] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+  
   // Withdrawal State
   const [banks, setBanks] = useState([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
