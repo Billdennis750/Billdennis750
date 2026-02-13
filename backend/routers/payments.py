@@ -372,10 +372,20 @@ async def initiate_payment(payment: PaymentInitiate, db=Depends(get_db)):
                 dva_data = await create_dedicated_virtual_account(customer_code)
                 
                 if dva_data:
+                    # Clean up account name - remove merchant prefix like "BLM DATA SOLUTIONS LTD / "
+                    raw_account_name = dva_data.get("account_name") or f"Cashflow MFB - {payment.customer_name}"
+                    # Remove common merchant prefixes
+                    clean_account_name = raw_account_name
+                    prefixes_to_remove = ["BLM DATA SOLUTIONS LTD / ", "BLM DATA SOLUTIONS LTD/", "BLM DATA SOLUTIONS/"]
+                    for prefix in prefixes_to_remove:
+                        if clean_account_name.upper().startswith(prefix.upper()):
+                            clean_account_name = clean_account_name[len(prefix):].strip()
+                            break
+                    
                     virtual_account = {
                         "bank_name": dva_data.get("bank", {}).get("name") or dva_data.get("bank_name") or "BudPay Bank",
                         "account_number": dva_data.get("account_number") or dva_data.get("virtual_account_number"),
-                        "account_name": dva_data.get("account_name") or f"Cashflow MFB - {payment.customer_name}"
+                        "account_name": clean_account_name
                     }
                     
                     # Store the virtual account for future use
