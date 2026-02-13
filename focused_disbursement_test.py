@@ -11,7 +11,7 @@ import sys
 from datetime import datetime
 
 # Test configuration
-BACKEND_URL = "https://budpay-mfb.preview.emergentagent.com"
+BACKEND_URL = "https://mfb-staging.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Admin credentials for testing

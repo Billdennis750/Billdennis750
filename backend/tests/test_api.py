@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 
 # Get BASE_URL from environment or use preview URL
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://budpay-mfb.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://mfb-staging.preview.emergentagent.com').rstrip('/')
 
 # Test credentials from requirement
 ADMIN_EMAIL = "kdride6@gmail.com"

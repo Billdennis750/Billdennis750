@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Logo URL for emails (can be overridden by environment variable)
 LOGO_URL = os.environ.get("LOGO_URL", "https://customer-assets.emergentagent.com/job_microfin-portal/artifacts/yv8s58dq_1000315618-removebg-preview.png")
 # Use FRONTEND_URL for email links, fallback to BACKEND_URL for backwards compatibility
-WEBSITE_URL = os.environ.get("FRONTEND_URL", os.environ.get("BACKEND_URL", "https://budpay-mfb.preview.emergentagent.com"))
+WEBSITE_URL = os.environ.get("FRONTEND_URL", os.environ.get("BACKEND_URL", "https://mfb-staging.preview.emergentagent.com"))
 
 # Email provider configuration
 EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "resend").lower()

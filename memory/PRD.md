@@ -120,7 +120,7 @@ EMAIL_PROVIDER=resend
 
 ### Frontend (.env)
 ```
-REACT_APP_BACKEND_URL=https://budpay-mfb.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://mfb-staging.preview.emergentagent.com
 ```
 
 ## Test Credentials
