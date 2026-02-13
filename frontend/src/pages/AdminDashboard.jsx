@@ -1243,8 +1243,9 @@ const AdminDashboard = () => {
                       </tbody>
                     </table>
                   </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Activity Tab */}
