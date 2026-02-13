@@ -1074,60 +1074,175 @@ const AdminDashboard = () => {
 
           {/* Payments Tab */}
           <TabsContent value="payments">
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Transactions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-gray-50">
-                        <th className="text-left p-3 text-sm font-semibold text-gray-600">User</th>
-                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Type</th>
-                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Amount</th>
-                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Status</th>
-                        <th className="text-left p-3 text-sm font-semibold text-gray-600">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {applications.filter(a => a.processing_fee_paid || a.deposit_paid).map((app) => (
-                        <React.Fragment key={app.application_id}>
-                          {app.processing_fee_paid && (
-                            <tr className="border-b hover:bg-gray-50">
-                              <td className="p-3">{app.full_name}</td>
-                              <td className="p-3">Processing Fee</td>
-                              <td className="p-3 font-semibold text-green-600">₦2,500</td>
+            <div className="space-y-6">
+              {/* Pending Payments Section */}
+              <Card className="border-yellow-200 bg-yellow-50/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-yellow-800">
+                      <Clock className="w-5 h-5" />
+                      Pending Bank Transfers
+                    </CardTitle>
+                    <Button 
+                      onClick={fetchPendingPayments} 
+                      variant="outline" 
+                      size="sm"
+                      disabled={loadingPendingPayments}
+                      className="border-yellow-300 hover:bg-yellow-100"
+                    >
+                      {loadingPendingPayments ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      <span className="ml-2">Refresh</span>
+                    </Button>
+                  </div>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Users who initiated bank transfers but haven't been confirmed yet. Verify payment in your bank before confirming.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {loadingPendingPayments ? (
+                    <div className="text-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-yellow-600" />
+                      <p className="mt-2 text-yellow-700">Loading pending payments...</p>
+                    </div>
+                  ) : pendingPayments.length === 0 ? (
+                    <div className="text-center py-8 text-yellow-700">
+                      <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-2" />
+                      <p>No pending payments. Click refresh to check.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-yellow-200 bg-yellow-100/50">
+                            <th className="text-left p-3 text-sm font-semibold text-yellow-800">Customer</th>
+                            <th className="text-left p-3 text-sm font-semibold text-yellow-800">Application ID</th>
+                            <th className="text-left p-3 text-sm font-semibold text-yellow-800">Amount</th>
+                            <th className="text-left p-3 text-sm font-semibold text-yellow-800">Type</th>
+                            <th className="text-left p-3 text-sm font-semibold text-yellow-800">Bank Details</th>
+                            <th className="text-left p-3 text-sm font-semibold text-yellow-800">Initiated</th>
+                            <th className="text-left p-3 text-sm font-semibold text-yellow-800">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pendingPayments.map((txn) => (
+                            <tr key={txn.order_reference} className="border-b border-yellow-100 hover:bg-yellow-100/50">
                               <td className="p-3">
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  Paid
+                                <div>
+                                  <p className="font-medium">{txn.customer_name}</p>
+                                  <p className="text-xs text-gray-500">{txn.customer_email}</p>
+                                </div>
+                              </td>
+                              <td className="p-3 font-mono text-sm">{txn.application_id}</td>
+                              <td className="p-3 font-semibold text-green-600">₦{txn.amount?.toLocaleString()}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  txn.payment_type === 'processing_fee' 
+                                    ? 'bg-blue-100 text-blue-700' 
+                                    : 'bg-purple-100 text-purple-700'
+                                }`}>
+                                  {txn.payment_type === 'processing_fee' ? 'Processing Fee' : 'Deposit'}
                                 </span>
                               </td>
-                              <td className="p-3 text-sm text-gray-500">
-                                {app.processing_fee_paid_at ? new Date(app.processing_fee_paid_at).toLocaleString() : '-'}
+                              <td className="p-3 text-sm">
+                                {txn.virtual_account ? (
+                                  <div>
+                                    <p className="font-medium">{txn.virtual_account.bank_name}</p>
+                                    <p className="font-mono">{txn.virtual_account.account_number}</p>
+                                  </div>
+                                ) : '-'}
                               </td>
-                            </tr>
-                          )}
-                          {app.deposit_paid && (
-                            <tr className="border-b hover:bg-gray-50">
-                              <td className="p-3">{app.full_name}</td>
-                              <td className="p-3">Fixed Deposit</td>
-                              <td className="p-3 font-semibold text-green-600">₦3,000</td>
+                              <td className="p-3 text-sm text-gray-500">
+                                {txn.created_at ? new Date(txn.created_at).toLocaleString() : '-'}
+                              </td>
                               <td className="p-3">
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  Paid
-                                </span>
-                              </td>
-                              <td className="p-3 text-sm text-gray-500">
-                                {app.deposit_paid_at ? new Date(app.deposit_paid_at).toLocaleString() : '-'}
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleConfirmPayment(txn.order_reference)}
+                                  disabled={confirmingPayment === txn.order_reference}
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  data-testid={`confirm-payment-${txn.order_reference}`}
+                                >
+                                  {confirmingPayment === txn.order_reference ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      Confirm
+                                    </>
+                                  )}
+                                </Button>
                               </td>
                             </tr>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Completed Payments Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    Completed Payments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="text-left p-3 text-sm font-semibold text-gray-600">User</th>
+                          <th className="text-left p-3 text-sm font-semibold text-gray-600">Type</th>
+                          <th className="text-left p-3 text-sm font-semibold text-gray-600">Amount</th>
+                          <th className="text-left p-3 text-sm font-semibold text-gray-600">Status</th>
+                          <th className="text-left p-3 text-sm font-semibold text-gray-600">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {applications.filter(a => a.processing_fee_paid || a.deposit_paid).map((app) => (
+                          <React.Fragment key={app.application_id}>
+                            {app.processing_fee_paid && (
+                              <tr className="border-b hover:bg-gray-50">
+                                <td className="p-3">{app.full_name}</td>
+                                <td className="p-3">Processing Fee</td>
+                                <td className="p-3 font-semibold text-green-600">₦2,500</td>
+                                <td className="p-3">
+                                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                    Paid
+                                  </span>
+                                </td>
+                                <td className="p-3 text-sm text-gray-500">
+                                  {app.processing_fee_paid_at ? new Date(app.processing_fee_paid_at).toLocaleString() : '-'}
+                                </td>
+                              </tr>
+                            )}
+                            {app.deposit_paid && (
+                              <tr className="border-b hover:bg-gray-50">
+                                <td className="p-3">{app.full_name}</td>
+                                <td className="p-3">Fixed Deposit</td>
+                                <td className="p-3 font-semibold text-green-600">₦3,000</td>
+                                <td className="p-3">
+                                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                    Paid
+                                  </span>
+                                </td>
+                                <td className="p-3 text-sm text-gray-500">
+                                  {app.deposit_paid_at ? new Date(app.deposit_paid_at).toLocaleString() : '-'}
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
               </CardContent>
             </Card>
           </TabsContent>
