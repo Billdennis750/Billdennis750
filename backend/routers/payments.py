@@ -294,6 +294,11 @@ async def create_dedicated_virtual_account(customer_code: str):
                 data = response.json()
                 if data.get("status"):
                     return data.get("data", {})
+            elif response.status_code == 409:
+                # DVA already exists but we can't retrieve it (BudPay API limitation)
+                # Return special marker to trigger variant customer creation
+                logger.warning(f"DVA exists for {customer_code} but cannot be retrieved - needs variant customer")
+                return {"needs_variant": True}
             return None
     except Exception as e:
         logger.error(f"Failed to create BudPay DVA: {e}")
