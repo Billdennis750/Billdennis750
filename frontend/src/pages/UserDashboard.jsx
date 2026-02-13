@@ -498,83 +498,125 @@ const UserDashboard = () => {
         )}
       </div>
 
-      {/* Bank Transfer Payment Modal */}
+      {/* Redesigned Bank Transfer Payment Modal */}
       {showPaymentModal && paymentDetails && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-md rounded-2xl shadow-2xl ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-green-600 to-green-500 p-6 text-white text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+              <div className="relative z-10">
+                <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                  <Building2 className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold">Complete Your Payment</h3>
+                <p className="text-green-100 mt-2">
+                  {paymentDetails.paymentType === 'processing_fee' ? 'Processing Fee' : 'Security Deposit'}
+                </p>
+              </div>
+            </div>
+
             <div className="p-6">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Building2 className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className={`text-xl font-bold ${textPrimary}`}>Bank Transfer Payment</h3>
-                <p className={`text-sm mt-1 ${textMuted}`}>
-                  Transfer exactly ₦{paymentDetails.amount?.toLocaleString()} to complete payment
+              {/* Amount Display */}
+              <div className={`text-center mb-6 p-4 rounded-2xl ${isDarkMode ? 'bg-slate-700/50' : 'bg-green-50'}`}>
+                <p className={`text-sm ${textMuted} mb-1`}>Amount to Transfer</p>
+                <p className="text-4xl font-bold text-green-600">
+                  ₦{paymentDetails.amount?.toLocaleString()}
                 </p>
               </div>
 
-              <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-slate-700' : 'bg-gray-50'} space-y-4`}>
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm ${textMuted}`}>Bank Name</span>
-                  <span className={`font-semibold ${textPrimary}`}>
-                    {paymentDetails.virtual_account?.bank_name}
-                  </span>
-                </div>
+              {/* Bank Details Card */}
+              <div className={`p-5 rounded-2xl border-2 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
+                <p className={`text-xs font-semibold uppercase tracking-wider mb-4 ${textMuted}`}>Transfer Details</p>
                 
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm ${textMuted}`}>Account Name</span>
-                  <span className={`font-semibold text-sm ${textPrimary}`}>
-                    {paymentDetails.virtual_account?.account_name}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm ${textMuted}`}>Account Number</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-mono font-bold text-lg ${textPrimary}`}>
-                      {paymentDetails.virtual_account?.account_number}
-                    </span>
-                    <button
-                      onClick={() => copyToClipboard(paymentDetails.virtual_account?.account_number, 'Account number')}
-                      className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 transition-colors"
-                    >
-                      <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="pt-3 border-t border-dashed">
+                <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className={`text-sm ${textMuted}`}>Amount to Pay</span>
-                    <span className="font-bold text-xl text-green-600">
-                      ₦{paymentDetails.amount?.toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-slate-600' : 'bg-white'}`}>
+                        <Building2 className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className={`text-xs ${textMuted}`}>Bank</p>
+                        <p className={`font-semibold ${textPrimary}`}>
+                          {paymentDetails.virtual_account?.bank_name || 'BudPay'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className={`h-px ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'}`}></div>
+                  
+                  <div>
+                    <p className={`text-xs ${textMuted} mb-1`}>Account Name</p>
+                    <p className={`font-semibold ${textPrimary}`}>
+                      {paymentDetails.virtual_account?.account_name || 'Cashflow MFB'}
+                    </p>
+                  </div>
+                  
+                  <div className={`h-px ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'}`}></div>
+                  
+                  <div>
+                    <p className={`text-xs ${textMuted} mb-2`}>Account Number</p>
+                    <div className="flex items-center justify-between">
+                      <span className={`font-mono text-2xl font-bold tracking-wider ${textPrimary}`}>
+                        {paymentDetails.virtual_account?.account_number || '---'}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(paymentDetails.virtual_account?.account_number, 'Account number')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-100 hover:bg-green-200 text-green-700 font-medium text-sm transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-yellow-900/30' : 'bg-yellow-50'} border ${isDarkMode ? 'border-yellow-800' : 'border-yellow-200'}`}>
-                <p className={`text-xs ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
-                  <strong>Important:</strong> Transfer the exact amount shown above. Your payment will be automatically confirmed within 1-2 minutes after successful transfer.
-                </p>
+              {/* Instructions */}
+              <div className={`mt-4 p-4 rounded-xl ${isDarkMode ? 'bg-amber-900/30 border border-amber-800' : 'bg-amber-50 border border-amber-200'}`}>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <AlertCircle className={`w-5 h-5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-semibold ${isDarkMode ? 'text-amber-200' : 'text-amber-800'}`}>Important</p>
+                    <ul className={`text-xs mt-1 space-y-1 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>
+                      <li>• Transfer the exact amount shown above</li>
+                      <li>• Use the account number provided</li>
+                      <li>• Payment confirms within 1-2 minutes</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
 
+              {/* Action Buttons */}
               <div className="mt-6 space-y-3">
                 <Button
                   onClick={handlePaymentComplete}
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 py-4 text-lg font-semibold rounded-xl shadow-lg shadow-green-600/30 transition-all hover:scale-[1.02]"
                 >
-                  I've Made the Transfer
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  I've Completed the Transfer
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowPaymentModal(false)}
-                  className="w-full"
+                  className={`w-full py-3 rounded-xl ${isDarkMode ? 'border-slate-600 hover:bg-slate-700' : ''}`}
                 >
-                  Cancel
+                  Cancel Payment
                 </Button>
+              </div>
+              
+              {/* Security Badge */}
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                Secured by BudPay • 256-bit encryption
               </div>
             </div>
           </div>
