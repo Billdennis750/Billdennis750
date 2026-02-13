@@ -217,25 +217,55 @@ const UserDashboard = () => {
                   </div>
                   
                   {recentApp.status === 'pending_payment' && (
-                    <Button 
-                      onClick={() => handlePayment(recentApp, 'processing_fee')} 
-                      className="bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/30"
-                      disabled={paymentLoading}
-                    >
-                      {paymentLoading ? 'Processing...' : 'Pay ₦2,500 Processing Fee'}
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-gray-500">Amount Due</p>
+                        <p className="text-lg font-bold text-green-600">₦2,500</p>
+                      </div>
+                      <Button 
+                        onClick={() => handlePayment(recentApp, 'processing_fee')} 
+                        className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg shadow-green-600/30 px-6 py-3 text-base font-semibold rounded-xl transition-all hover:scale-105"
+                        disabled={paymentLoading}
+                      >
+                        {paymentLoading ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="w-5 h-5 mr-2" />
+                            Pay Processing Fee
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   )}
                   
                   {recentApp.status === 'approved' && (
-                    <Button 
-                      onClick={() => handlePayment(recentApp, 'deposit')} 
-                      className="bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/30"
-                      disabled={paymentLoading}
-                    >
-                      {paymentLoading ? 'Processing...' : 'Pay ₦3,000 Deposit'}
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-gray-500">Deposit Required</p>
+                        <p className="text-lg font-bold text-green-600">₦3,000</p>
+                      </div>
+                      <Button 
+                        onClick={() => handlePayment(recentApp, 'deposit')} 
+                        className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg shadow-green-600/30 px-6 py-3 text-base font-semibold rounded-xl transition-all hover:scale-105"
+                        disabled={paymentLoading}
+                      >
+                        {paymentLoading ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Wallet className="w-5 h-5 mr-2" />
+                            Pay Deposit & Get Loan
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
