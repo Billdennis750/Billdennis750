@@ -382,16 +382,19 @@ async def verify_payment(verify: PaymentVerify, db=Depends(get_db)):
 @router.post("/webhook")
 async def budpay_webhook(request: Request, db=Depends(get_db)):
     """
-    Handle BudPay payment webhooks.
+    Handle BudPay payment webhooks including DVA (Dedicated Virtual Account) payments.
     
-    Security measures:
-    1. HMAC signature verification (when configured)
-    2. IP allowlisting (when configured)
-    3. Audit logging
+    BudPay webhook events:
+    - transaction: Successful payment via DVA or card
+    - transaction.recurrent: Recurring payment
+    - charge.success / charge.failed: Checkout payments
+    - dedicatedaccount.assign.success: DVA assigned
+    - dedicatedaccount.assign.failed: DVA assignment failed
     
-    BudPay sends webhooks when:
-    - Payment is successful (charge.success)
-    - Payment fails (charge.failed)
+    DVA Flow:
+    1. Customer transfers to virtual account
+    2. BudPay sends webhook with eventType: "transaction"
+    3. We update transaction status and application
     """
     client_ip = get_client_ip(request)
     order_ref = "unknown"
@@ -422,63 +425,106 @@ async def budpay_webhook(request: Request, db=Depends(get_db)):
         webhook_data = json.loads(body)
         logger.info(f"Received BudPay webhook from {client_ip}: {webhook_data}")
         
-        # Extract event type and data
+        # Extract event type - BudPay uses eventType or event field
         event_type = (
+            webhook_data.get("eventType") or  # Primary DVA format
             webhook_data.get("notifyType") or 
             webhook_data.get("event") or 
             webhook_data.get("notify") or
             "unknown"
         )
         
+        # Get event data - can be nested in 'data' or at root
         event_data = webhook_data.get("data", webhook_data)
         
-        # Extract reference
+        # Extract reference - DVA uses orderId, checkout uses reference
         order_ref = (
+            event_data.get("orderId") or  # DVA format
             event_data.get("reference") or
             event_data.get("tx_ref") or
             event_data.get("merchantTransactionRef") or
+            webhook_data.get("orderId") or
             webhook_data.get("reference")
         )
         
+        # Extract customer email for DVA lookup
+        customer_email = (
+            event_data.get("customerEmail") or
+            event_data.get("customer", {}).get("email") or
+            event_data.get("email")
+        )
+        
+        # Extract transaction details
         transaction_status = str(event_data.get("status") or webhook_data.get("status") or "").lower()
-        transaction_id = event_data.get("id") or event_data.get("transaction_id")
-        amount_paid = event_data.get("amount") or event_data.get("charged_amount")
+        transaction_id = event_data.get("id") or event_data.get("transaction_id") or event_data.get("transactionId")
+        amount_paid = event_data.get("amount") or event_data.get("charged_amount") or event_data.get("amountPaid")
+        
+        # Handle DVA-specific events
+        if event_type in ["transaction", "transaction.recurrent"]:
+            # DVA payment - find by email and amount match if no direct reference
+            if not order_ref and customer_email and amount_paid:
+                # Find pending transaction for this customer with matching amount
+                transaction = await db.transactions.find_one({
+                    "customer_email": customer_email,
+                    "status": "pending",
+                    "amount": float(amount_paid)
+                }, sort=[("created_at", -1)])
+                
+                if transaction:
+                    order_ref = transaction.get("order_reference")
+                    logger.info(f"Found DVA transaction by email match: {order_ref}")
         
         if not order_ref:
             logger.warning(f"BudPay webhook missing order reference from {client_ip}")
-            log_webhook_event(request, client_ip, "missing", "rejected", {})
+            log_webhook_event(request, client_ip, "missing", "rejected", webhook_data)
             return {"status": "ok", "message": "No order reference provided"}
         
-        # Find transaction
+        # Find transaction by order_reference
         transaction = await db.transactions.find_one({"order_reference": order_ref})
+        
+        # Fallback: try budpay_reference
         if not transaction:
             transaction = await db.transactions.find_one({"budpay_reference": order_ref})
         
+        # Fallback for DVA: match by customer email + pending status
+        if not transaction and customer_email:
+            transaction = await db.transactions.find_one({
+                "customer_email": customer_email,
+                "status": "pending"
+            }, sort=[("created_at", -1)])
+        
         if not transaction:
             logger.warning(f"Transaction not found for webhook: {order_ref} from {client_ip}")
-            log_webhook_event(request, client_ip, order_ref, "not_found", {})
+            log_webhook_event(request, client_ip, order_ref, "not_found", webhook_data)
             return {"status": "ok", "message": "Transaction not found"}
         
-        # Map webhook status
+        # Map webhook status to our status
         status_map = {
             "success": "completed",
             "successful": "completed",
             "completed": "completed",
             "approved": "completed",
             "paid": "completed",
+            "delivered": "completed",  # DVA might use this
             "failed": "failed",
             "cancelled": "failed",
             "abandoned": "failed",
             "expired": "failed"
         }
-        payment_status = status_map.get(transaction_status, "pending")
         
-        # Update transaction
+        # For "transaction" event type, assume success if status is not explicitly failed
+        if event_type == "transaction" and transaction_status not in ["failed", "cancelled", "abandoned", "expired"]:
+            payment_status = "completed"
+        else:
+            payment_status = status_map.get(transaction_status, "pending")
+        
+        # Update transaction record
         update_data = {
             "status": payment_status,
             "webhook_received": True,
             "webhook_verified": True,
             "webhook_ip": client_ip,
+            "webhook_event_type": event_type,
             "updated_at": datetime.now(timezone.utc)
         }
         
@@ -492,13 +538,15 @@ async def budpay_webhook(request: Request, db=Depends(get_db)):
             {"$set": update_data}
         )
         
-        # Process successful payment
+        # Process successful payment - update application status
         if payment_status == "completed":
             await process_successful_payment(transaction, db)
+            logger.info(f"Successfully processed DVA payment for {order_ref}")
         
         log_webhook_event(request, client_ip, order_ref, "success", {
             "event_type": event_type,
-            "payment_status": payment_status
+            "payment_status": payment_status,
+            "amount": amount_paid
         })
         
         return {"status": "success", "message": "Webhook processed"}
